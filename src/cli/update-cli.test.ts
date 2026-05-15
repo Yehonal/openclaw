@@ -620,7 +620,7 @@ describe("update-cli", () => {
     vi.mocked(fetchNpmPackageTargetStatus).mockResolvedValue({
       target: "latest",
       version: "9999.0.0",
-      nodeEngine: ">=24.0.0",
+      nodeEngine: ">=22.16.0",
     });
     vi.mocked(resolveNpmChannelTag).mockResolvedValue({
       tag: "latest",
@@ -2052,7 +2052,7 @@ describe("update-cli", () => {
     vi.mocked(fetchNpmPackageTargetStatus).mockResolvedValue({
       target: "latest",
       version: "2026.3.23-2",
-      nodeEngine: ">=24.0.0",
+      nodeEngine: ">=22.16.0",
     });
     nodeVersionSatisfiesEngine.mockReturnValue(false);
 
