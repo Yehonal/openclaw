@@ -5374,10 +5374,9 @@ describe("runCodexAppServerAttempt", () => {
       return {};
     });
 
-    const run = runCodexAppServerAttempt(
-      createParams("session", path.join(tempDir, "workspace")),
-      { turnTerminalIdleTimeoutMs: 60_000 },
-    );
+    const run = runCodexAppServerAttempt(createParams("session", path.join(tempDir, "workspace")), {
+      turnTerminalIdleTimeoutMs: 60_000,
+    });
     await bufferedTerminal;
     await new Promise<void>((resolve) => setImmediate(resolve));
     harness.close();
@@ -5595,10 +5594,9 @@ describe("runCodexAppServerAttempt", () => {
 
   it("releases completion when the app-server client closes during an active turn", async () => {
     const harness = createStartedThreadHarness();
-    const run = runCodexAppServerAttempt(
-      createParams("session", path.join(tempDir, "workspace")),
-      { turnTerminalIdleTimeoutMs: 60_000 },
-    );
+    const run = runCodexAppServerAttempt(createParams("session", path.join(tempDir, "workspace")), {
+      turnTerminalIdleTimeoutMs: 60_000,
+    });
 
     await harness.waitForMethod("turn/start");
     await new Promise<void>((resolve) => setImmediate(resolve));
@@ -5619,10 +5617,9 @@ describe("runCodexAppServerAttempt", () => {
 
   it("does not fail a turn when the client closes after terminal completion is queued", async () => {
     const harness = createStartedThreadHarness();
-    const run = runCodexAppServerAttempt(
-      createParams("session", path.join(tempDir, "workspace")),
-      { turnTerminalIdleTimeoutMs: 60_000 },
-    );
+    const run = runCodexAppServerAttempt(createParams("session", path.join(tempDir, "workspace")), {
+      turnTerminalIdleTimeoutMs: 60_000,
+    });
 
     await harness.waitForMethod("turn/start");
     const completed = harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
