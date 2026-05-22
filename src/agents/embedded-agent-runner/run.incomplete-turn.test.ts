@@ -336,7 +336,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
       }),
     );
 
-    const result = await runEmbeddedPiAgent({
+    const result = await runEmbeddedAgent({
       ...overflowBaseRunParams,
       provider: "openai-codex",
       model: "gpt-5.5",
@@ -1817,7 +1817,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
       }),
     );
 
-    const result = await runEmbeddedPiAgent({
+    const result = await runEmbeddedAgent({
       ...overflowBaseRunParams,
       provider: "openai",
       model: "gpt-5.4",

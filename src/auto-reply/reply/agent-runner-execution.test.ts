@@ -4412,7 +4412,7 @@ describe("runAgentTurnWithFallback", () => {
 
   it("preserves the active session when embedded overflow recovery fails", async () => {
     state.isContextOverflowErrorMock.mockReturnValue(true);
-    state.runEmbeddedPiAgentMock.mockResolvedValueOnce({
+    state.runEmbeddedAgentMock.mockResolvedValueOnce({
       payloads: [],
       meta: {
         error: {
@@ -4460,7 +4460,7 @@ describe("runAgentTurnWithFallback", () => {
 
   it("preserves the active session when compaction failure is thrown before reply", async () => {
     state.isCompactionFailureErrorMock.mockReturnValue(true);
-    state.runEmbeddedPiAgentMock.mockRejectedValueOnce(
+    state.runEmbeddedAgentMock.mockRejectedValueOnce(
       new Error("Auto-compaction failed: nothing to compact"),
     );
 

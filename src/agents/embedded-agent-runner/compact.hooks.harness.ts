@@ -384,6 +384,10 @@ export async function loadCompactHooksHarness(): Promise<{
     resolveAgentHarnessPolicy: vi.fn(() => ({ runtime: "openclaw" })),
   }));
 
+  vi.doMock("../harness/runtime-plugin.js", () => ({
+    ensureSelectedAgentHarnessPlugin: vi.fn(async () => undefined),
+  }));
+
   vi.doMock("../../plugins/provider-runtime.js", () => ({
     prepareProviderRuntimeAuth: vi.fn(async () => ({ resolvedApiKey: undefined })),
     resolveProviderReasoningOutputModeWithPlugin: vi.fn(() => undefined),
@@ -454,7 +458,9 @@ export async function loadCompactHooksHarness(): Promise<{
       };
     },
     SessionManager: {
-      open: vi.fn(() => ({})),
+      open: vi.fn(() => ({
+        buildSessionContext: vi.fn(() => ({ messages: sessionMessages })),
+      })),
     },
     SettingsManager: {
       create: vi.fn(() => ({})),
@@ -463,10 +469,48 @@ export async function loadCompactHooksHarness(): Promise<{
     generateSummary: vi.fn(async () => "summary"),
   }));
 
+  vi.doMock("../sessions/index.js", () => ({
+    createAgentSession: vi.fn(async () => {
+      const session = {
+        sessionId: "session-1",
+        messages: sessionMessages.map((message) => structuredClone(message)),
+        agent: {
+          streamFn: vi.fn(),
+          transport: "sse",
+          state: {
+            get messages() {
+              return session.messages;
+            },
+            set messages(messages: unknown[]) {
+              session.messages = [...messages];
+            },
+          },
+        },
+        compact: vi.fn(async () => {
+          session.messages.splice(1);
+          return await sessionCompactImpl();
+        }),
+        setActiveToolsByName: vi.fn(),
+        abortCompaction: sessionAbortCompactionMock,
+        dispose: vi.fn(),
+      };
+      return { session };
+    }),
+    SessionManager: {
+      open: vi.fn(() => ({
+        buildSessionContext: vi.fn(() => ({ messages: sessionMessages })),
+      })),
+    },
+    estimateTokens: estimateTokensMock,
+  }));
+
   vi.doMock("../session-tool-result-guard-wrapper.js", () => ({
-    guardSessionManager: vi.fn(() => ({
-      flushPendingToolResults: vi.fn(),
-    })),
+    guardSessionManager: vi.fn((sessionManager: Record<string, unknown>) => {
+      Object.assign(sessionManager, {
+        flushPendingToolResults: vi.fn(),
+      });
+      return sessionManager;
+    }),
   }));
 
   vi.doMock("../agent-settings.js", () => ({
@@ -698,6 +742,12 @@ export async function loadCompactHooksHarness(): Promise<{
 
   vi.doMock("./extensions.js", () => ({
     buildEmbeddedExtensionFactories: vi.fn(() => []),
+  }));
+
+  vi.doMock("./resource-loader.js", () => ({
+    createEmbeddedAgentResourceLoader: vi.fn(() => ({
+      reload: vi.fn(async () => undefined),
+    })),
   }));
 
   vi.doMock("./history.js", () => ({

@@ -1380,7 +1380,7 @@ describe("compactEmbeddedAgentSession hooks (ownsCompaction engine)", () => {
       failure: { reason: "missing_thread_binding" },
     });
 
-    const result = await compactEmbeddedPiSession(
+    const result = await compactEmbeddedAgentSession(
       wrappedCompactionArgs({
         provider: "openai-codex",
         model: "gpt-5.4",

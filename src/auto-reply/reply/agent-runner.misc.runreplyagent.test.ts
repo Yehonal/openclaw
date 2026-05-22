@@ -2470,7 +2470,7 @@ describe("runReplyAgent fallback reasoning tags", () => {
       provider: "google-gemini-cli",
       model: "gemini-3",
     }));
-    compactState.compactEmbeddedPiSessionMock.mockResolvedValueOnce({
+    compactState.compactEmbeddedAgentSessionMock.mockResolvedValueOnce({
       ok: true,
       compacted: true,
       result: { tokensAfter: 1_000_000 },

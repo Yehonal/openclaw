@@ -5,8 +5,6 @@ import { ensureContextEnginesInitialized as ensureContextEnginesInitializedImpl 
 import { resolveContextEngine as resolveContextEngineImpl } from "../../context-engine/registry.js";
 import type { ContextEngine } from "../../context-engine/types.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
-import { ensureSelectedAgentHarnessPlugin as ensureSelectedAgentHarnessPluginImpl } from "../harness/runtime-plugin.js";
-import { maybeCompactAgentHarnessSession as maybeCompactAgentHarnessSessionImpl } from "../harness/selection.js";
 import { createPreparedEmbeddedAgentSettingsManager as createPreparedEmbeddedAgentSettingsManagerImpl } from "../agent-project-settings.js";
 import {
   applyAgentAutoCompactionGuard as applyAgentAutoCompactionGuardImpl,
@@ -22,6 +20,8 @@ import { runContextEngineMaintenance as runContextEngineMaintenanceImpl } from "
 import { shouldPreemptivelyCompactBeforePrompt as shouldPreemptivelyCompactBeforePromptImpl } from "../embedded-agent-runner/run/preemptive-compaction.js";
 import { resolveLiveToolResultMaxChars as resolveLiveToolResultMaxCharsImpl } from "../embedded-agent-runner/tool-result-truncation.js";
 import type { EmbeddedAgentCompactResult } from "../embedded-agent-runner/types.js";
+import { ensureSelectedAgentHarnessPlugin as ensureSelectedAgentHarnessPluginImpl } from "../harness/runtime-plugin.js";
+import { maybeCompactAgentHarnessSession as maybeCompactAgentHarnessSessionImpl } from "../harness/selection.js";
 import type { AgentMessage } from "../runtime/index.js";
 import { SessionManager } from "../sessions/index.js";
 import type { SkillSnapshot } from "../skills.js";
@@ -447,11 +447,6 @@ export async function runCliTurnCompactionLifecycle(params: {
     agentDir: params.agentDir,
     cfg: params.cfg,
     contextTokenBudget,
-  });
-  await cliCompactionDeps.applyAgentAutoCompactionGuard({
-    settingsManager,
-    contextEngineInfo: contextEngine.info,
-    compactionMode: resolveEffectiveCompactionMode(params.cfg),
   });
 
   const preemptiveCompaction = cliCompactionDeps.shouldPreemptivelyCompactBeforePrompt({

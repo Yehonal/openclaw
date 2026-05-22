@@ -49,7 +49,7 @@ import { resolveModelAsync } from "./model.js";
 import type { EmbeddedAgentCompactResult } from "./types.js";
 
 function shouldFallbackAfterHarnessCompaction(
-  result: EmbeddedPiCompactResult | undefined,
+  result: EmbeddedAgentCompactResult | undefined,
 ): boolean {
   return (
     result?.ok === false &&

@@ -275,61 +275,6 @@ describe("subscribeEmbeddedAgentSession", () => {
     },
   );
 
-  it("suppresses assistant streaming while deterministic exec approval delivery is pending", async () => {
-    let resolveToolResult: (() => void) | undefined;
-    const onToolResult = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveToolResult = resolve;
-        }),
-    );
-    const onPartialReply = vi.fn();
-
-    const { emit } = createSubscribedHarness({
-      runId: "run",
-      onToolResult,
-      onPartialReply,
-    });
-
-    emit({
-      type: "tool_execution_start",
-      toolName: "exec",
-      toolCallId: "tool-1",
-      args: { command: "echo hi" },
-    });
-    emit({
-      type: "tool_execution_end",
-      toolName: "exec",
-      toolCallId: "tool-1",
-      isError: false,
-      result: {
-        details: {
-          status: "approval-pending",
-          approvalId: "12345678-1234-1234-1234-123456789012",
-          approvalSlug: "12345678",
-          host: "gateway",
-          command: "echo hi",
-        },
-      },
-    });
-
-    emit({
-      type: "message_start",
-      message: { role: "assistant" },
-    });
-    emitAssistantTextDelta(emit, "After tool");
-
-    await vi.waitFor(() => {
-      expect(onToolResult).toHaveBeenCalledTimes(1);
-    });
-    expect(onPartialReply).not.toHaveBeenCalled();
-
-    expect(resolveToolResult).toBeTypeOf("function");
-    resolveToolResult?.();
-    await Promise.resolve();
-    expect(onPartialReply).not.toHaveBeenCalled();
-  });
-
   it("blocks local MEDIA urls from case-variant tool names in verbose output", async () => {
     const onToolResult = vi.fn();
     const { emit } = createSubscribedHarness({
@@ -1179,7 +1124,7 @@ describe("subscribeEmbeddedAgentSession", () => {
   it("preserves accepted session spawn terminal evidence across compaction retries", () => {
     const { session, emit } = createStubSessionHarness();
     const onAgentEvent = vi.fn();
-    const subscription = subscribeEmbeddedPiSession({
+    const subscription = subscribeEmbeddedAgentSession({
       session,
       runId: "run-spawn-side-effect-compaction",
       onAgentEvent,

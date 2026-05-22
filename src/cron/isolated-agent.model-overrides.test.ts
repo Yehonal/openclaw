@@ -289,7 +289,7 @@ describe("runCronIsolatedAgentTurn model overrides", () => {
         mockTexts: ["done"],
       });
 
-      const calls = vi.mocked(runEmbeddedPiAgent).mock.calls;
+      const calls = vi.mocked(runEmbeddedAgent).mock.calls;
       const callArgs = calls[calls.length - 1]?.[0];
       expect(callArgs?.provider).toBe("google");
       expect(callArgs?.model).toBe("gemini-3-flash-preview");
