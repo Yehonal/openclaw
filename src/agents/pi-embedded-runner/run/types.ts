@@ -110,6 +110,7 @@ export type EmbeddedRunAttemptResult = {
         handled?: false;
       };
   sessionIdUsed: string;
+  sessionFileUsed?: string;
   diagnosticTrace?: DiagnosticTraceContext;
   agentHarnessId?: string;
   agentHarnessResultClassification?: "empty" | "reasoning-only" | "planning-only";
@@ -117,6 +118,18 @@ export type EmbeddedRunAttemptResult = {
     message?: string;
     replayInvalid?: boolean;
     livenessState?: EmbeddedRunLivenessState;
+  };
+  codexAppServerFailure?: {
+    kind: "client_closed_before_turn_completed" | "turn_completion_idle_timeout";
+    transport: "stdio" | "websocket";
+    threadId?: string;
+    turnId?: string;
+    replaySafe: boolean;
+    replayBlockedReason?:
+      | "assistant_output"
+      | "tool_activity"
+      | "potential_side_effect"
+      | "active_item";
   };
   bootstrapPromptWarningSignaturesSeen?: string[];
   bootstrapPromptWarningSignature?: string;

@@ -12,10 +12,6 @@ import {
   listSessionEntries,
   patchSessionEntry,
 } from "../../../config/sessions/store.js";
-import {
-  bindOwnedSessionTranscriptWrites,
-  withOwnedSessionTranscriptWrites,
-} from "../../../config/sessions/transcript-write-context.js";
 import { hasSqliteSessionTranscriptEvents } from "../../../config/sessions/transcript-store.sqlite.js";
 import {
   assertContextEngineHostSupport,
