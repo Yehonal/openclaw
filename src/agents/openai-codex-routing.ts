@@ -2,7 +2,7 @@ import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { normalizeOptionalLowercaseString } from "../shared/string-coerce.js";
 import {
   OPENCLAW_AGENT_RUNTIME_ID,
-  normalizeOptionalAgentRuntimeId,
+  normalizeOptionalLegacyAgentRuntimeId,
 } from "./embedded-agent-runner/runtime.js";
 import { resolveProviderIdForAuth } from "./provider-auth-aliases.js";
 import { findNormalizedProviderValue, normalizeProviderId } from "./provider-id.js";
@@ -108,7 +108,7 @@ export function shouldRouteOpenAIThroughCodexAuthProvider(params: {
     return false;
   }
   const runtime =
-    normalizeOptionalAgentRuntimeId(params.agentHarnessId ?? params.harnessRuntime) ??
+    normalizeOptionalLegacyAgentRuntimeId(params.agentHarnessId ?? params.harnessRuntime) ??
     OPENCLAW_AGENT_RUNTIME_ID;
   if (runtime !== "openclaw") {
     return false;
@@ -137,7 +137,7 @@ export function listOpenAIAuthProfileProvidersForAgentRuntime(params: {
     return [params.provider];
   }
   const runtime =
-    normalizeOptionalAgentRuntimeId(
+    normalizeOptionalLegacyAgentRuntimeId(
       normalizeExplicitRuntimePin(params.agentHarnessId) ?? params.harnessRuntime,
     ) ?? OPENCLAW_AGENT_RUNTIME_ID;
   if (runtime === "codex") {
@@ -153,7 +153,7 @@ export function listOpenAIAuthProfileProvidersForAgentRuntime(params: {
 }
 
 function normalizeExplicitRuntimePin(value: unknown): string | undefined {
-  const runtime = normalizeOptionalAgentRuntimeId(value);
+  const runtime = normalizeOptionalLegacyAgentRuntimeId(value);
   return runtime === "auto" || runtime === "default" ? undefined : runtime;
 }
 
@@ -184,7 +184,7 @@ export function resolveSelectedOpenAIRuntimeProvider(params: {
     return OPENAI_CODEX_PROVIDER_ID;
   }
   const runtime =
-    normalizeOptionalAgentRuntimeId(params.agentHarnessId ?? params.harnessRuntime) ??
+    normalizeOptionalLegacyAgentRuntimeId(params.agentHarnessId ?? params.harnessRuntime) ??
     OPENCLAW_AGENT_RUNTIME_ID;
   if (!isOpenAIProvider(params.provider)) {
     return params.provider;
@@ -204,7 +204,8 @@ export function resolveContextConfigProviderForRuntime(params: {
   runtimeId?: string;
 }): string {
   const provider = normalizeProviderId(params.provider);
-  const runtimeId = normalizeOptionalAgentRuntimeId(params.runtimeId) ?? OPENCLAW_AGENT_RUNTIME_ID;
+  const runtimeId =
+    normalizeOptionalLegacyAgentRuntimeId(params.runtimeId) ?? OPENCLAW_AGENT_RUNTIME_ID;
   if (provider === OPENAI_PROVIDER_ID && runtimeId === "codex") {
     return OPENAI_CODEX_PROVIDER_ID;
   }

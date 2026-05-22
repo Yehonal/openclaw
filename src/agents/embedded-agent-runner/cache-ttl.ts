@@ -1,12 +1,12 @@
+import {
+  isAnthropicFamilyCacheTtlEligible,
+  isAnthropicModelRef,
+} from "../../llm/providers/stream-wrappers/anthropic-family-cache-semantics.js";
 import { resolveProviderCacheTtlEligibility } from "../../plugins/provider-runtime.js";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
 } from "../../shared/string-coerce.js";
-import {
-  isAnthropicFamilyCacheTtlEligible,
-  isAnthropicModelRef,
-} from "./anthropic-family-cache-semantics.js";
 import { isGooglePromptCacheEligible } from "./prompt-cache-retention.js";
 
 type CustomEntryLike = { type?: unknown; customType?: unknown; data?: unknown };

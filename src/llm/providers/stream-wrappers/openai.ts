@@ -1,29 +1,37 @@
 import type { SimpleStreamOptions } from "openclaw/plugin-sdk/llm";
 import { streamSimple } from "openclaw/plugin-sdk/llm";
-import type { ThinkLevel } from "../../auto-reply/thinking.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
-import { normalizeOptionalLowercaseString, readStringValue } from "../../shared/string-coerce.js";
 import {
   patchCodexNativeWebSearchPayload,
   resolveCodexNativeSearchActivation,
-} from "../codex-native-web-search-core.js";
-import { emitModelTransportDebug } from "../model-transport-debug.js";
+} from "../../../agents/codex-native-web-search-core.js";
+import { emitModelTransportDebug } from "../../../agents/model-transport-debug.js";
 import {
   flattenCompletionMessagesToStringContent,
   stripCompletionMessagesToRoleContent,
-} from "../openai-completions-string-content.js";
-import { resolveOpenAIReasoningEffortForModel } from "../openai-reasoning-effort.js";
+} from "../../../agents/openai-completions-string-content.js";
+import { resolveOpenAIReasoningEffortForModel } from "../../../agents/openai-reasoning-effort.js";
 import {
   applyOpenAIResponsesPayloadPolicy,
   resolveOpenAIResponsesPayloadPolicy,
-} from "../openai-responses-payload-policy.js";
-import { resolveOpenAITextVerbosity, type OpenAITextVerbosity } from "../openai-text-verbosity.js";
-import { createOpenAIResponsesTransportStreamFn } from "../openai-transport-stream.js";
-import { resolveProviderRequestPolicyConfig } from "../provider-request-config.js";
-import type { StreamFn } from "../runtime/index.js";
-import { log } from "./logger.js";
+} from "../../../agents/openai-responses-payload-policy.js";
+import {
+  resolveOpenAITextVerbosity,
+  type OpenAITextVerbosity,
+} from "../../../agents/openai-text-verbosity.js";
+import { createOpenAIResponsesTransportStreamFn } from "../../../agents/openai-transport-stream.js";
+import { resolveProviderRequestPolicyConfig } from "../../../agents/provider-request-config.js";
+import type { StreamFn } from "../../../agents/runtime/index.js";
+import type { ThinkLevel } from "../../../auto-reply/thinking.js";
+import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import { createSubsystemLogger } from "../../../logging/subsystem.js";
+import {
+  normalizeOptionalLowercaseString,
+  readStringValue,
+} from "../../../shared/string-coerce.js";
 import { mapThinkingLevelToReasoningEffort } from "./reasoning-effort-utils.js";
 import { streamWithPayloadPatch } from "./stream-payload-utils.js";
+
+const log = createSubsystemLogger("llm/providers/stream-wrappers");
 
 type OpenAIServiceTier = "auto" | "default" | "flex" | "priority";
 type OpenClawSimpleStreamOptions = SimpleStreamOptions & {

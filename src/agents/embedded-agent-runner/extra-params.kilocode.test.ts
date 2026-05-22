@@ -1,8 +1,11 @@
 import type { StreamFn } from "openclaw/plugin-sdk/agent-core";
 import type { Context, Model, SimpleStreamOptions } from "openclaw/plugin-sdk/llm";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  createKilocodeWrapper,
+  isProxyReasoningUnsupported,
+} from "../../llm/providers/stream-wrappers/proxy.js";
 import { captureEnv } from "../../test-utils/env.js";
-import { createKilocodeWrapper, isProxyReasoningUnsupported } from "./proxy-stream-wrappers.js";
 
 type ExtraParamsCapture<TPayload extends Record<string, unknown>> = {
   headers?: Record<string, string>;

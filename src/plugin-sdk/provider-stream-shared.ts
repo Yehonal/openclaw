@@ -1,6 +1,6 @@
 import { streamSimple } from "openclaw/plugin-sdk/llm";
-import { streamWithPayloadPatch } from "../agents/embedded-agent-runner/stream-payload-utils.js";
 import type { StreamFn } from "../agents/runtime/index.js";
+import { streamWithPayloadPatch } from "../llm/providers/stream-wrappers/stream-payload-utils.js";
 import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import type { ProviderWrapStreamFnContext } from "./plugin-entry.js";
 
@@ -685,13 +685,13 @@ export {
   applyAnthropicPayloadPolicyToParams,
   resolveAnthropicPayloadPolicy,
 } from "../agents/anthropic-payload-policy.js";
-export { applyAnthropicEphemeralCacheControlMarkers } from "../agents/embedded-agent-runner/anthropic-cache-control-payload.js";
+export { applyAnthropicEphemeralCacheControlMarkers } from "../llm/providers/stream-wrappers/anthropic-cache-control-payload.js";
 export {
   createMoonshotThinkingWrapper,
   resolveMoonshotThinkingType,
-} from "../agents/embedded-agent-runner/moonshot-thinking-stream-wrappers.js";
+} from "../llm/providers/stream-wrappers/moonshot-thinking.js";
 export { streamWithPayloadPatch };
 export {
   createToolStreamWrapper,
   createZaiToolStreamWrapper,
-} from "../agents/embedded-agent-runner/zai-stream-wrappers.js";
+} from "../llm/providers/stream-wrappers/zai.js";

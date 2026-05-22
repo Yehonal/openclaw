@@ -233,7 +233,7 @@ describe("runAgentHarnessAttempt", () => {
 
   it("allows the selected OpenClaw harness to satisfy context-engine pre-prompt assembly", async () => {
     const result = await runAgentHarnessAttempt({
-      ...createAttemptParams(providerRuntimeConfig("codex", "pi")),
+      ...createAttemptParams(providerRuntimeConfig("codex", "openclaw")),
       contextEngine: createContextEngineRequiringAssembly(),
     });
 

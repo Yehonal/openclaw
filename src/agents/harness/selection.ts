@@ -14,7 +14,7 @@ import type {
 } from "../embedded-agent-runner/run/types.js";
 import {
   isDefaultAgentRuntimeId,
-  normalizeOptionalAgentRuntimeId,
+  normalizeOptionalLegacyAgentRuntimeId,
 } from "../embedded-agent-runner/runtime.js";
 import type { EmbeddedAgentCompactResult } from "../embedded-agent-runner/types.js";
 import { resolveSandboxRuntimeStatus } from "../sandbox/runtime-status.js";
@@ -132,7 +132,7 @@ function selectAgentHarnessDecision(params: {
   agentHarnessRuntimeOverride?: string;
 }): AgentHarnessSelectionDecision {
   const resolvedPolicy = resolveConfiguredAgentHarnessPolicy(params);
-  const runtimeOverride = normalizeOptionalAgentRuntimeId(params.agentHarnessRuntimeOverride);
+  const runtimeOverride = normalizeOptionalLegacyAgentRuntimeId(params.agentHarnessRuntimeOverride);
   const policy =
     runtimeOverride && !isDefaultAgentRuntimeId(runtimeOverride)
       ? ({

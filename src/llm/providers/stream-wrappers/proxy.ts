@@ -1,9 +1,12 @@
 import { streamSimple } from "openclaw/plugin-sdk/llm";
-import type { ThinkLevel } from "../../auto-reply/thinking.js";
-import { normalizeOptionalLowercaseString, readStringValue } from "../../shared/string-coerce.js";
-import { resolveProviderRequestPolicy } from "../provider-attribution.js";
-import { resolveProviderRequestPolicyConfig } from "../provider-request-config.js";
-import type { StreamFn } from "../runtime/index.js";
+import { resolveProviderRequestPolicy } from "../../../agents/provider-attribution.js";
+import { resolveProviderRequestPolicyConfig } from "../../../agents/provider-request-config.js";
+import type { StreamFn } from "../../../agents/runtime/index.js";
+import type { ThinkLevel } from "../../../auto-reply/thinking.js";
+import {
+  normalizeOptionalLowercaseString,
+  readStringValue,
+} from "../../../shared/string-coerce.js";
 import { applyAnthropicEphemeralCacheControlMarkers } from "./anthropic-cache-control-payload.js";
 import { isAnthropicModelRef } from "./anthropic-family-cache-semantics.js";
 import { mapThinkingLevelToReasoningEffort } from "./reasoning-effort-utils.js";

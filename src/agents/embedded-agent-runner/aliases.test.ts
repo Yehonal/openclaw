@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as embeddedAgentRunner from "../embedded-agent-runner.js";
 import * as embeddedAgent from "../embedded-agent.js";
-import { normalizeEmbeddedAgentRuntime } from "./runtime.js";
+import { normalizeEmbeddedAgentRuntime, normalizeLegacyAgentRuntimeId } from "./runtime.js";
 
 describe("embedded runner compatibility aliases", () => {
   it("keeps the embedded-agent barrel bound to the runner implementation", () => {
@@ -12,8 +12,12 @@ describe("embedded runner compatibility aliases", () => {
     expect(embeddedAgent.abortEmbeddedAgentRun).toBe(embeddedAgentRunner.abortEmbeddedAgentRun);
   });
 
-  it("normalizes shipped built-in runtime aliases", () => {
-    expect(normalizeEmbeddedAgentRuntime("pi")).toBe("openclaw");
+  it("normalizes shipped Codex runtime aliases", () => {
     expect(normalizeEmbeddedAgentRuntime("codex-app-server")).toBe("codex");
+  });
+
+  it("keeps old Pi runtime compatibility explicit", () => {
+    expect(normalizeEmbeddedAgentRuntime("pi")).toBe("pi");
+    expect(normalizeLegacyAgentRuntimeId("pi")).toBe("openclaw");
   });
 });

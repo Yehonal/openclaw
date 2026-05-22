@@ -7,7 +7,7 @@ import {
 } from "../../plugins/providers.js";
 import {
   isDefaultAgentRuntimeId,
-  normalizeOptionalAgentRuntimeId,
+  normalizeOptionalLegacyAgentRuntimeId,
 } from "../embedded-agent-runner/runtime.js";
 import { resolveAgentHarnessPolicy } from "./policy.js";
 
@@ -101,7 +101,7 @@ export async function ensureSelectedAgentHarnessPlugin(params: {
   agentHarnessRuntimeOverride?: string;
   workspaceDir: string;
 }): Promise<void> {
-  const runtimeOverride = normalizeOptionalAgentRuntimeId(params.agentHarnessRuntimeOverride);
+  const runtimeOverride = normalizeOptionalLegacyAgentRuntimeId(params.agentHarnessRuntimeOverride);
   const policy = resolveAgentHarnessPolicy({
     provider: params.provider,
     modelId: params.modelId,

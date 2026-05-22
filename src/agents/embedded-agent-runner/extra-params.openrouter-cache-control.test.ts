@@ -1,6 +1,6 @@
 import type { StreamFn } from "openclaw/plugin-sdk/agent-core";
 import { describe, expect, it } from "vitest";
-import { createOpenRouterSystemCacheWrapper } from "./proxy-stream-wrappers.js";
+import { createOpenRouterSystemCacheWrapper } from "../../llm/providers/stream-wrappers/proxy.js";
 
 type StreamPayload = {
   messages: Array<{

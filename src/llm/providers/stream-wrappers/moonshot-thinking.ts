@@ -1,7 +1,7 @@
-import type { ThinkLevel } from "../../auto-reply/thinking.js";
-import { createLazyImportLoader } from "../../shared/lazy-promise.js";
-import { normalizeOptionalLowercaseString } from "../../shared/string-coerce.js";
-import type { StreamFn } from "../runtime/index.js";
+import type { StreamFn } from "../../../agents/runtime/index.js";
+import type { ThinkLevel } from "../../../auto-reply/thinking.js";
+import { createLazyImportLoader } from "../../../shared/lazy-promise.js";
+import { normalizeOptionalLowercaseString } from "../../../shared/string-coerce.js";
 import { streamWithPayloadPatch } from "./stream-payload-utils.js";
 
 type MoonshotThinkingType = "enabled" | "disabled";

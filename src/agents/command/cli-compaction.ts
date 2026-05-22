@@ -18,6 +18,7 @@ import {
 } from "../embedded-agent-runner/compaction-safety-timeout.js";
 import { runContextEngineMaintenance as runContextEngineMaintenanceImpl } from "../embedded-agent-runner/context-engine-maintenance.js";
 import { shouldPreemptivelyCompactBeforePrompt as shouldPreemptivelyCompactBeforePromptImpl } from "../embedded-agent-runner/run/preemptive-compaction.js";
+import { isOpenClawBuiltinOrLegacyAgentRuntime } from "../embedded-agent-runner/runtime.js";
 import { resolveLiveToolResultMaxChars as resolveLiveToolResultMaxCharsImpl } from "../embedded-agent-runner/tool-result-truncation.js";
 import type { EmbeddedAgentCompactResult } from "../embedded-agent-runner/types.js";
 import { ensureSelectedAgentHarnessPlugin as ensureSelectedAgentHarnessPluginImpl } from "../harness/runtime-plugin.js";
@@ -154,7 +155,7 @@ function isNativeHarnessCompactionSession(
   provider: string,
 ): sessionEntry is SessionEntry {
   const harnessId = sessionEntry?.agentHarnessId?.trim().toLowerCase();
-  if (!harnessId || harnessId === "pi") {
+  if (!harnessId || isOpenClawBuiltinOrLegacyAgentRuntime(harnessId)) {
     return false;
   }
   const providerId = provider.trim().toLowerCase();

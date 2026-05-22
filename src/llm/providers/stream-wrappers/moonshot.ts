@@ -1,13 +1,13 @@
 import { streamSimple } from "openclaw/plugin-sdk/llm";
-import type { ThinkLevel } from "../../auto-reply/thinking.js";
-import type { StreamFn } from "../runtime/index.js";
+import type { StreamFn } from "../../../agents/runtime/index.js";
+import type { ThinkLevel } from "../../../auto-reply/thinking.js";
 import { streamWithPayloadPatch } from "./stream-payload-utils.js";
 
 export {
   createMoonshotThinkingWrapper,
   resolveMoonshotThinkingKeep,
   resolveMoonshotThinkingType,
-} from "./moonshot-thinking-stream-wrappers.js";
+} from "./moonshot-thinking.js";
 
 export function shouldApplySiliconFlowThinkingOffCompat(params: {
   provider: string;

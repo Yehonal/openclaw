@@ -7,8 +7,8 @@ import {
   normalizedParameterFreeSchema,
 } from "openclaw/plugin-sdk/agent-runtime-test-contracts";
 import { describe, expect, it } from "vitest";
+import { createOpenAIResponsesContextManagementWrapper } from "../llm/providers/stream-wrappers/openai.js";
 import { buildProviderToolCompatFamilyHooks } from "../plugin-sdk/provider-tools.js";
-import { createOpenAIResponsesContextManagementWrapper } from "./embedded-agent-runner/openai-stream-wrappers.js";
 import { buildOpenAIResponsesParams } from "./openai-transport-stream.js";
 
 describe("OpenAI transport schema normalization runtime contract", () => {

@@ -18,7 +18,7 @@ import { isLikelyContextOverflowError } from "./embedded-agent-helpers/errors.js
 import type { FailoverReason } from "./embedded-agent-helpers/types.js";
 import {
   isDefaultAgentRuntimeId,
-  normalizeOptionalAgentRuntimeId,
+  normalizeOptionalLegacyAgentRuntimeId,
 } from "./embedded-agent-runner/runtime.js";
 import {
   FailoverError,
@@ -365,7 +365,7 @@ async function assertModelFallbackCandidateHarnessAvailable(
   if (isCliProvider(params.provider, params.cfg)) {
     return;
   }
-  const agentRuntimeOverride = normalizeOptionalAgentRuntimeId(agentHarnessRuntimeOverride);
+  const agentRuntimeOverride = normalizeOptionalLegacyAgentRuntimeId(agentHarnessRuntimeOverride);
   const harnessPolicy = resolveAgentHarnessPolicy({
     provider: params.provider,
     modelId: params.model,

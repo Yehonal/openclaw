@@ -2,18 +2,22 @@ import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { isRecord } from "../utils.js";
 import {
   isDefaultAgentRuntimeId,
-  isOpenClawBuiltinAgentRuntime,
-  normalizeOptionalAgentRuntimeId,
+  isOpenClawBuiltinOrLegacyAgentRuntime,
+  normalizeOptionalLegacyAgentRuntimeId,
 } from "./embedded-agent-runner/runtime.js";
 import { resolveAgentHarnessPolicy } from "./harness/policy.js";
 import { normalizeProviderId } from "./provider-id.js";
 
 function normalizeConfiguredRuntimeId(value: unknown): string | undefined {
-  return normalizeOptionalAgentRuntimeId(value);
+  return normalizeOptionalLegacyAgentRuntimeId(value);
 }
 
 function isSelectablePluginRuntime(runtime: string | undefined): runtime is string {
-  return !!runtime && !isDefaultAgentRuntimeId(runtime) && !isOpenClawBuiltinAgentRuntime(runtime);
+  return (
+    !!runtime &&
+    !isDefaultAgentRuntimeId(runtime) &&
+    !isOpenClawBuiltinOrLegacyAgentRuntime(runtime)
+  );
 }
 
 function listAgentModelRefs(value: unknown): string[] {

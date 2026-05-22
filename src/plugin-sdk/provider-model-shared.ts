@@ -87,7 +87,7 @@ export {
 export {
   createMoonshotThinkingWrapper,
   resolveMoonshotThinkingType,
-} from "../agents/embedded-agent-runner/moonshot-thinking-stream-wrappers.js";
+} from "../llm/providers/stream-wrappers/moonshot-thinking.js";
 export {
   cloneFirstTemplateModel,
   matchesExactOrPrefix,

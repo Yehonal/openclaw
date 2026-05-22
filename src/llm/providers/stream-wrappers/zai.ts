@@ -1,5 +1,5 @@
 import { streamSimple } from "openclaw/plugin-sdk/llm";
-import type { StreamFn } from "../runtime/index.js";
+import type { StreamFn } from "../../../agents/runtime/index.js";
 import { streamWithPayloadPatch } from "./stream-payload-utils.js";
 
 /**

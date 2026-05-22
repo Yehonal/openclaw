@@ -1,4 +1,4 @@
-import type { ThinkLevel } from "../../auto-reply/thinking.js";
+import type { ThinkLevel } from "../../../auto-reply/thinking.js";
 
 export type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
 

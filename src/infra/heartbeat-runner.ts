@@ -13,7 +13,7 @@ import {
 } from "../agents/agent-scope.js";
 import { appendCronStyleCurrentTimeLine } from "../agents/current-time.js";
 import { resolveEmbeddedSessionLane } from "../agents/embedded-agent-runner/lanes.js";
-import { normalizeOptionalAgentRuntimeId } from "../agents/embedded-agent-runner/runtime.js";
+import { normalizeOptionalLegacyAgentRuntimeId } from "../agents/embedded-agent-runner/runtime.js";
 import { formatReasoningMessage } from "../agents/embedded-agent-utils.js";
 import { resolveAgentHarnessPolicy } from "../agents/harness/policy.js";
 import { resolveModelRefFromString, type ModelRef } from "../agents/model-selection.js";
@@ -446,7 +446,7 @@ function usesCodexHarness(params: {
     modelId: modelRef.model,
     agentId: params.agentId,
   });
-  const runtimeId = normalizeOptionalAgentRuntimeId(policy.runtime);
+  const runtimeId = normalizeOptionalLegacyAgentRuntimeId(policy.runtime);
   if (runtimeId === "codex") {
     return true;
   }

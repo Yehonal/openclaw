@@ -1,7 +1,7 @@
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "../../shared/string-coerce.js";
+} from "../../../shared/string-coerce.js";
 
 type AnthropicCacheRetentionFamily =
   | "anthropic-direct"

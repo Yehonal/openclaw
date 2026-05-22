@@ -1,15 +1,15 @@
 import type { StreamFn } from "openclaw/plugin-sdk/agent-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  createOpenRouterSystemCacheWrapper,
+  createOpenRouterWrapper,
+  isProxyReasoningUnsupported,
+} from "../llm/providers/stream-wrappers/proxy.js";
 import { runExtraParamsPayloadCase } from "./embedded-agent-runner-extraparams.test-support.js";
 import {
   applyExtraParamsToAgent,
   testing as extraParamsTesting,
 } from "./embedded-agent-runner/extra-params.js";
-import {
-  createOpenRouterSystemCacheWrapper,
-  createOpenRouterWrapper,
-  isProxyReasoningUnsupported,
-} from "./embedded-agent-runner/proxy-stream-wrappers.js";
 
 beforeEach(() => {
   extraParamsTesting.setProviderRuntimeDepsForTest({

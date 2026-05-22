@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeGoogleThinkingPayload } from "./google-stream-wrappers.js";
+import { sanitizeGoogleThinkingPayload } from "./google.js";
 
 describe("sanitizeGoogleThinkingPayload — gemini-2.5-pro zero budget", () => {
   it("removes thinkingBudget=0 for gemini-2.5-pro", () => {

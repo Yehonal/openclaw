@@ -8,7 +8,7 @@ import {
   createOpenAICompletionsToolsCompatWrapper,
   createOpenAIThinkingLevelWrapper,
   createCodexNativeWebSearchWrapper,
-} from "./openai-stream-wrappers.js";
+} from "./openai.js";
 
 function createPayloadCapture(opts?: { initialReasoning?: unknown }) {
   const payloads: Array<Record<string, unknown>> = [];

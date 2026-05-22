@@ -1,7 +1,7 @@
 import { resolveDefaultAgentDir } from "../../../agents/agent-scope-config.js";
 import { resolveCliBackendConfig } from "../../../agents/cli-backends.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../../agents/defaults.js";
-import { normalizeEmbeddedAgentRuntime } from "../../../agents/embedded-agent-runner/runtime.js";
+import { normalizeLegacyAgentRuntimeId } from "../../../agents/embedded-agent-runner/runtime.js";
 import { resolveAgentHarnessPolicy } from "../../../agents/harness/policy.js";
 import { getRegisteredAgentHarness } from "../../../agents/harness/registry.js";
 import { normalizeProviderId } from "../../../agents/provider-id.js";
@@ -40,7 +40,7 @@ function normalizeRuntimeId(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
-  const normalized = normalizeEmbeddedAgentRuntime(value.trim().toLowerCase());
+  const normalized = normalizeLegacyAgentRuntimeId(value.trim().toLowerCase());
   return normalized || undefined;
 }
 

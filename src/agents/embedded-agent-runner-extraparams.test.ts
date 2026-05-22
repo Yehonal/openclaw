@@ -283,17 +283,10 @@ function createAnthropicFastModeWrapper(baseStreamFn: StreamFn | undefined, fast
   return createAnthropicServiceTierWrapper(baseStreamFn, fastMode ? "auto" : "standard_only");
 }
 
-import { isAnthropicBedrockModel } from "./embedded-agent-runner/anthropic-family-cache-semantics.js";
-import { createAnthropicToolPayloadCompatibilityWrapper } from "./embedded-agent-runner/anthropic-family-tool-payload-compat.js";
-import {
-  applyExtraParamsToAgent,
-  resolveAgentTransportOverride,
-  resolveExplicitSettingsTransport,
-  resolvePreparedExtraParams,
-} from "./embedded-agent-runner/extra-params.js";
-import { createGoogleThinkingPayloadWrapper } from "./embedded-agent-runner/google-stream-wrappers.js";
-import { log } from "./embedded-agent-runner/logger.js";
-import { createMinimaxFastModeWrapper } from "./embedded-agent-runner/minimax-stream-wrappers.js";
+import { isAnthropicBedrockModel } from "../llm/providers/stream-wrappers/anthropic-family-cache-semantics.js";
+import { createAnthropicToolPayloadCompatibilityWrapper } from "../llm/providers/stream-wrappers/anthropic-family-tool-payload-compat.js";
+import { createGoogleThinkingPayloadWrapper } from "../llm/providers/stream-wrappers/google.js";
+import { createMinimaxFastModeWrapper } from "../llm/providers/stream-wrappers/minimax.js";
 import {
   createCodexNativeWebSearchWrapper,
   createOpenAIAttributionHeadersWrapper,
@@ -309,7 +302,14 @@ import {
   resolveOpenAIFastMode,
   resolveOpenAIServiceTier,
   resolveOpenAITextVerbosity,
-} from "./embedded-agent-runner/openai-stream-wrappers.js";
+} from "../llm/providers/stream-wrappers/openai.js";
+import {
+  applyExtraParamsToAgent,
+  resolveAgentTransportOverride,
+  resolveExplicitSettingsTransport,
+  resolvePreparedExtraParams,
+} from "./embedded-agent-runner/extra-params.js";
+import { log } from "./embedded-agent-runner/logger.js";
 
 type WrapProviderStreamFnParams = Parameters<
   typeof import("../plugins/provider-hook-runtime.js").wrapProviderStreamFn

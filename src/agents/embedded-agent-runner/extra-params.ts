@@ -2,6 +2,20 @@ import type { SimpleStreamOptions } from "openclaw/plugin-sdk/llm";
 import { streamSimple } from "openclaw/plugin-sdk/llm";
 import type { ThinkLevel } from "../../auto-reply/thinking.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import { createGoogleThinkingPayloadWrapper } from "../../llm/providers/stream-wrappers/google.js";
+import { createMinimaxThinkingDisabledWrapper } from "../../llm/providers/stream-wrappers/minimax.js";
+import {
+  createSiliconFlowThinkingWrapper,
+  shouldApplySiliconFlowThinkingOffCompat,
+} from "../../llm/providers/stream-wrappers/moonshot.js";
+import {
+  createOpenAICompletionsStrictMessageKeysWrapper,
+  createOpenAICompletionsToolsCompatWrapper,
+  createOpenAIResponsesContextManagementWrapper,
+  createOpenAIStringContentWrapper,
+} from "../../llm/providers/stream-wrappers/openai.js";
+import { createOpenRouterSystemCacheWrapper } from "../../llm/providers/stream-wrappers/proxy.js";
+import { streamWithPayloadPatch } from "../../llm/providers/stream-wrappers/stream-payload-utils.js";
 import {
   createDeepSeekV4OpenAICompatibleThinkingWrapper,
   createThinkingOnlyFinalTextWrapper,
@@ -20,22 +34,8 @@ import { resolveProviderRequestPolicyConfig } from "../provider-request-config.j
 import type { AgentRuntimeTransport } from "../runtime-plan/types.js";
 import type { StreamFn } from "../runtime/index.js";
 import type { SettingsManager } from "../sessions/index.js";
-import { createGoogleThinkingPayloadWrapper } from "./google-stream-wrappers.js";
 import { log } from "./logger.js";
-import { createMinimaxThinkingDisabledWrapper } from "./minimax-stream-wrappers.js";
-import {
-  createSiliconFlowThinkingWrapper,
-  shouldApplySiliconFlowThinkingOffCompat,
-} from "./moonshot-stream-wrappers.js";
-import {
-  createOpenAICompletionsStrictMessageKeysWrapper,
-  createOpenAICompletionsToolsCompatWrapper,
-  createOpenAIResponsesContextManagementWrapper,
-  createOpenAIStringContentWrapper,
-} from "./openai-stream-wrappers.js";
 import { resolveCacheRetention } from "./prompt-cache-retention.js";
-import { createOpenRouterSystemCacheWrapper } from "./proxy-stream-wrappers.js";
-import { streamWithPayloadPatch } from "./stream-payload-utils.js";
 
 const defaultProviderRuntimeDeps = {
   prepareProviderExtraParams: prepareProviderExtraParamsRuntime,
