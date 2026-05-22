@@ -13,7 +13,6 @@ import {
   resolveAgentAvatar,
   resolvePublicAgentAvatarSource,
 } from "../../agents/identity-avatar.js";
-import { AGENT_INTERNAL_EVENT_TYPE_TASK_COMPLETION } from "../../agents/internal-event-contract.js";
 import type { AgentInternalEvent } from "../../agents/internal-events.js";
 import { resolveProviderIdForAuth } from "../../agents/provider-auth-aliases.js";
 import { resolveSandboxConfigForAgent } from "../../agents/sandbox/config.js";
@@ -74,10 +73,6 @@ import {
 } from "../../sessions/input-provenance.js";
 import { resolveSendPolicy } from "../../sessions/send-policy.js";
 import {
-  parseRawSessionConversationRef,
-  parseThreadSessionSuffix,
-} from "../../sessions/session-key-utils.js";
-import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
 } from "../../shared/string-coerce.js";
@@ -97,7 +92,6 @@ import {
 } from "../../utils/message-channel.js";
 import { resolveAssistantIdentity } from "../assistant-identity.js";
 import {
-  type ChatAbortControllerEntry,
   registerChatAbortController,
   resolveAgentRunExpiresAtMs,
   updateChatRunProvider,
@@ -128,6 +122,7 @@ import {
   canonicalizeSpawnedByForAgent,
   loadGatewaySessionRow,
   loadSessionEntry,
+  parseGroupKey,
   resolveGatewayModelSupportsImages,
   resolveSessionModelRef,
 } from "../session-utils.js";
@@ -162,6 +157,17 @@ function formatAttachmentFailureForLog(err: unknown): string {
   return `${primary}\nCaused by: ${causeText}`;
 }
 
+function shouldSuppressPromptPersistenceForAgentRun(params: {
+  inputProvenance?: InputProvenance;
+  internalEvents?: AgentInternalEvent[];
+}): boolean {
+  return (
+    params.inputProvenance?.kind === "inter_session" &&
+    params.inputProvenance.sourceTool === "subagent_announce" &&
+    params.internalEvents?.some((event) => event.type === "task_completion") === true
+  );
+}
+
 function logAttachmentFailure(
   logGateway: Pick<GatewayRequestContext["logGateway"], "error">,
   label: string,
@@ -173,7 +179,7 @@ function logAttachmentFailure(
   });
 }
 
-function clientHasAdminScope(client: GatewayRequestHandlerOptions["client"]): boolean {
+function resolveSenderIsOwnerFromClient(client: GatewayRequestHandlerOptions["client"]): boolean {
   const scopes = Array.isArray(client?.connect?.scopes) ? client.connect.scopes : [];
   return scopes.includes(ADMIN_SCOPE);
 }
@@ -181,11 +187,11 @@ function clientHasAdminScope(client: GatewayRequestHandlerOptions["client"]): bo
 function resolveAllowModelOverrideFromClient(
   client: GatewayRequestHandlerOptions["client"],
 ): boolean {
-  return clientHasAdminScope(client) || client?.internal?.allowModelOverride === true;
+  return resolveSenderIsOwnerFromClient(client) || client?.internal?.allowModelOverride === true;
 }
 
 function resolveCanResetSessionFromClient(client: GatewayRequestHandlerOptions["client"]): boolean {
-  return clientHasAdminScope(client);
+  return resolveSenderIsOwnerFromClient(client);
 }
 
 function resolveCanUseInternalRuntimeHandoff(
@@ -280,29 +286,37 @@ function normalizeTrustedGroupMetadata(value?: {
   };
 }
 
-function resolveSessionKeyGroupId(sessionKey: string): string | undefined {
-  const { baseSessionKey } = parseThreadSessionSuffix(sessionKey);
-  const conversation = parseRawSessionConversationRef(baseSessionKey ?? sessionKey);
-  if (!conversation || (conversation.kind !== "group" && conversation.kind !== "channel")) {
-    return undefined;
-  }
-  return conversation.rawId;
+function groupIdsEqual(left?: string, right?: string): boolean {
+  return Boolean(left && right && left.toLowerCase() === right.toLowerCase());
 }
 
 function resolveTrustedGroupMetadata(params: {
-  sessionKey: string;
-  spawnedBy?: string;
+  typedGroupId?: string;
   stored: TrustedGroupMetadata;
   inherited?: TrustedGroupMetadata;
 }): TrustedGroupMetadata {
+  const inheritedMatchesTyped =
+    params.inherited?.groupId &&
+    (!params.typedGroupId || groupIdsEqual(params.inherited.groupId, params.typedGroupId));
+  const trustedGroupId = params.typedGroupId ?? params.inherited?.groupId;
+  const storedMatchesTrusted =
+    params.stored.groupId && trustedGroupId && groupIdsEqual(params.stored.groupId, trustedGroupId);
+  const groupId = storedMatchesTrusted
+    ? params.stored.groupId
+    : inheritedMatchesTyped
+      ? params.inherited?.groupId
+      : trustedGroupId;
+  if (!groupId) {
+    return {};
+  }
   return {
-    groupId:
-      params.stored.groupId ??
-      params.inherited?.groupId ??
-      resolveSessionKeyGroupId(params.sessionKey) ??
-      (params.spawnedBy ? resolveSessionKeyGroupId(params.spawnedBy) : undefined),
-    groupChannel: params.stored.groupChannel ?? params.inherited?.groupChannel,
-    groupSpace: params.stored.groupSpace ?? params.inherited?.groupSpace,
+    groupId,
+    groupChannel:
+      (storedMatchesTrusted ? params.stored.groupChannel : undefined) ??
+      (inheritedMatchesTyped ? params.inherited?.groupChannel : undefined),
+    groupSpace:
+      (storedMatchesTrusted ? params.stored.groupSpace : undefined) ??
+      (inheritedMatchesTyped ? params.inherited?.groupSpace : undefined),
   };
 }
 
@@ -314,7 +328,7 @@ function requestGroupMatchesTrusted(params: {
   if (!requestGroupId) {
     return true;
   }
-  return Boolean(params.trustedGroupId && requestGroupId === params.trustedGroupId);
+  return groupIdsEqual(requestGroupId, params.trustedGroupId);
 }
 
 function emitSessionsChanged(
@@ -344,7 +358,6 @@ function emitSessionsChanged(
             groupChannel: sessionRow.groupChannel,
             space: sessionRow.space,
             chatType: sessionRow.chatType,
-            origin: sessionRow.origin,
             spawnedBy: sessionRow.spawnedBy,
             spawnedWorkspaceDir: sessionRow.spawnedWorkspaceDir,
             forkedFromParent: sessionRow.forkedFromParent,
@@ -356,6 +369,10 @@ function emitSessionsChanged(
             deliveryContext: sessionRow.deliveryContext,
             parentSessionKey: sessionRow.parentSessionKey,
             childSessions: sessionRow.childSessions,
+            lastChannel: sessionRow.lastChannel,
+            lastTo: sessionRow.lastTo,
+            lastAccountId: sessionRow.lastAccountId,
+            lastThreadId: sessionRow.lastThreadId,
             thinkingLevel: sessionRow.thinkingLevel,
             fastMode: sessionRow.fastMode,
             verboseLevel: sessionRow.verboseLevel,
@@ -367,10 +384,6 @@ function emitSessionsChanged(
             abortedLastRun: sessionRow.abortedLastRun,
             inputTokens: sessionRow.inputTokens,
             outputTokens: sessionRow.outputTokens,
-            lastChannel: sessionRow.lastChannel,
-            lastTo: sessionRow.lastTo,
-            lastAccountId: sessionRow.lastAccountId,
-            lastThreadId: sessionRow.lastThreadId,
             totalTokens: sessionRow.totalTokens,
             totalTokensFresh: sessionRow.totalTokensFresh,
             contextTokens: sessionRow.contextTokens,
@@ -446,68 +459,6 @@ function readGatewayDedupeEntry(params: {
   return undefined;
 }
 
-function isAcceptedAgentDedupePayload(payload: unknown): payload is {
-  acceptedAt?: unknown;
-  dedupeKeys?: unknown;
-  expiresAtMs?: unknown;
-  ownerConnId?: unknown;
-  ownerDeviceId?: unknown;
-  runId?: unknown;
-  sessionKey?: unknown;
-  status: "accepted";
-} {
-  return (
-    typeof payload === "object" &&
-    payload !== null &&
-    (payload as { status?: unknown }).status === "accepted"
-  );
-}
-
-function isPreRegistrationAbortedAgentDedupePayload(payload: unknown): payload is {
-  runId?: unknown;
-  sessionKey?: unknown;
-  status: "timeout";
-  stopReason?: unknown;
-} {
-  const stopReason = (payload as { stopReason?: unknown } | null)?.stopReason;
-  return (
-    typeof payload === "object" &&
-    payload !== null &&
-    (payload as { status?: unknown }).status === "timeout" &&
-    (stopReason === "rpc" || stopReason === "stop")
-  );
-}
-
-function isPreRegistrationAbortedAgentDedupeEntryForSession(params: {
-  entry: ReturnType<typeof readGatewayDedupeEntry> | undefined;
-  runId: string;
-  sessionKey?: string;
-  alternateSessionKeys?: Array<string | undefined>;
-}): boolean {
-  if (!params.entry?.ok || !isPreRegistrationAbortedAgentDedupePayload(params.entry.payload)) {
-    return false;
-  }
-  const payload = params.entry.payload;
-  const payloadRunId = typeof payload.runId === "string" ? payload.runId.trim() : "";
-  if (payloadRunId && payloadRunId !== params.runId) {
-    return false;
-  }
-  const payloadSessionKey =
-    typeof payload.sessionKey === "string" && payload.sessionKey.trim()
-      ? payload.sessionKey.trim()
-      : undefined;
-  const expectedSessionKeys = new Set(
-    [params.sessionKey, ...(params.alternateSessionKeys ?? [])].filter((value): value is string =>
-      Boolean(value?.trim()),
-    ),
-  );
-  return (
-    !payloadSessionKey ||
-    expectedSessionKeys.size === 0 ||
-    expectedSessionKeys.has(payloadSessionKey)
-  );
-}
-
 function setGatewayDedupeEntries(params: {
   dedupe: GatewayRequestContext["dedupe"];
   keys: readonly string[];
@@ -522,32 +473,6 @@ function setGatewayDedupeEntries(params: {
   }
 }
 
-function setAbortedAgentDedupeEntries(params: {
-  dedupe: GatewayRequestContext["dedupe"];
-  keys: readonly string[];
-  runId: string;
-  stopReason: string;
-}) {
-  setGatewayDedupeEntries({
-    dedupe: params.dedupe,
-    keys: params.keys,
-    entry: {
-      ts: Date.now(),
-      ok: true,
-      payload: {
-        runId: params.runId,
-        status: "timeout" as const,
-        summary: "aborted",
-        stopReason: params.stopReason,
-      },
-    },
-  });
-}
-
-function resolveAbortedAgentStopReason(entry?: ChatAbortControllerEntry): string {
-  return entry?.abortStopReason?.trim() || "rpc";
-}
-
 function deleteGatewayDedupeEntries(params: {
   dedupe: GatewayRequestContext["dedupe"];
   keys: readonly string[];
@@ -560,6 +485,7 @@ function deleteGatewayDedupeEntries(params: {
 function dispatchAgentRunFromGateway(params: {
   ingressOpts: Parameters<typeof agentCommandFromIngress>[0];
   runId: string;
+  idempotencyKey: string;
   dedupeKeys: readonly string[];
   /**
    * Controller whose signal is wired into `ingressOpts.abortSignal`. Used on
@@ -667,24 +593,6 @@ function dispatchAgentRunFromGateway(params: {
     });
 }
 
-function shouldSuppressAgentPromptPersistence(params: {
-  inputProvenance?: InputProvenance;
-  internalEvents?: AgentInternalEvent[];
-}): boolean {
-  if (
-    params.inputProvenance?.kind !== "inter_session" ||
-    params.inputProvenance.sourceTool !== "subagent_announce"
-  ) {
-    return false;
-  }
-  return (
-    params.internalEvents?.some(
-      (event) =>
-        event.type === AGENT_INTERNAL_EVENT_TYPE_TASK_COMPLETION && event.source === "subagent",
-    ) === true
-  );
-}
-
 function yieldAfterAgentAcceptedAck(): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, 10);
@@ -746,9 +654,15 @@ export const agentHandlers: GatewayRequestHandlers = {
       cleanupBundleMcpOnRunEnd?: boolean;
       label?: string;
       inputProvenance?: InputProvenance;
+      initialVfsEntries?: Array<{
+        path: string;
+        contentBase64: string;
+        metadata?: Record<string, unknown>;
+      }>;
       workspaceDir?: string;
       voiceWakeTrigger?: string;
     };
+    const senderIsOwner = resolveSenderIsOwnerFromClient(client);
     const allowModelOverride = resolveAllowModelOverrideFromClient(client);
     const canResetSession = resolveCanResetSessionFromClient(client);
     const canUseInternalRuntimeHandoff = resolveCanUseInternalRuntimeHandoff(client);
@@ -801,67 +715,35 @@ export const agentHandlers: GatewayRequestHandlers = {
       keys: agentDedupeKeys,
     });
     if (cached) {
-      if (cached.ok && isAcceptedAgentDedupePayload(cached.payload)) {
-        const cachedRunId =
-          typeof cached.payload.runId === "string" && cached.payload.runId.trim()
-            ? cached.payload.runId.trim()
-            : runId;
-        const cachedSessionKey =
-          typeof cached.payload.sessionKey === "string" && cached.payload.sessionKey.trim()
-            ? cached.payload.sessionKey.trim()
-            : undefined;
-        respond(
-          true,
-          {
-            runId: cachedRunId,
-            status: "in_flight" as const,
-            ...(cachedSessionKey ? { sessionKey: cachedSessionKey } : {}),
-          },
-          undefined,
-          {
-            cached: true,
-            runId: cachedRunId,
-          },
-        );
-        return;
-      }
       respond(cached.ok, cached.payload, cached.error, {
         cached: true,
       });
       return;
     }
+    const activeRun = context.chatAbortControllers.get(idem);
+    if (activeRun) {
+      respond(true, { runId: idem, status: "in_flight" }, undefined, {
+        cached: true,
+        runId: idem,
+      });
+      return;
+    }
     let agentDedupeReserved = false;
     let agentRunAccepted = false;
-    const ownerConnId = typeof client?.connId === "string" ? client.connId : undefined;
-    const ownerDeviceId =
-      typeof client?.connect?.device?.id === "string" ? client.connect.device.id : undefined;
-    const reservePreAcceptedAgentDedupe = (sessionKey?: string) => {
-      if (agentDedupeReserved || !sessionKey) {
+    const reserveExecApprovalFollowupDedupe = () => {
+      if (agentDedupeReserved || !execApprovalFollowupApprovalId) {
         return;
       }
-      const acceptedAt = Date.now();
-      const pendingTimeoutMs = resolveAgentTimeoutMs({
-        cfg,
-        overrideSeconds: typeof request.timeout === "number" ? request.timeout : undefined,
-      });
       setGatewayDedupeEntries({
         dedupe: context.dedupe,
         keys: agentDedupeKeys,
         entry: {
-          ts: acceptedAt,
+          ts: Date.now(),
           ok: true,
           payload: {
             runId,
             status: "accepted" as const,
-            sessionKey,
-            acceptedAt,
-            dedupeKeys: agentDedupeKeys,
-            expiresAtMs: resolveAgentRunExpiresAtMs({
-              now: acceptedAt,
-              timeoutMs: pendingTimeoutMs,
-            }),
-            ownerConnId,
-            ownerDeviceId,
+            acceptedAt: Date.now(),
           },
         },
       });
@@ -869,18 +751,6 @@ export const agentHandlers: GatewayRequestHandlers = {
     };
     const clearUnacceptedExecApprovalFollowupDedupe = () => {
       if (!agentDedupeReserved || agentRunAccepted) {
-        return;
-      }
-      const reservedEntry = readGatewayDedupeEntry({
-        dedupe: context.dedupe,
-        keys: agentDedupeKeys,
-      });
-      if (
-        isPreRegistrationAbortedAgentDedupeEntryForSession({
-          entry: reservedEntry,
-          runId,
-        })
-      ) {
         return;
       }
       deleteGatewayDedupeEntries({
@@ -892,6 +762,94 @@ export const agentHandlers: GatewayRequestHandlers = {
     const normalizedAttachments = normalizeRpcAttachmentsToChatAttachments(request.attachments);
     const requestedBestEffortDeliver =
       typeof request.bestEffortDeliver === "boolean" ? request.bestEffortDeliver : undefined;
+
+    let message = (request.message ?? "").trim();
+    if (!isRawModelRun) {
+      message = annotateInterSessionPromptText(message, inputProvenance);
+    }
+    let images: Array<{ type: "image"; data: string; mimeType: string }> = [];
+    let imageOrder: PromptImageOrderEntry[] = [];
+    if (normalizedAttachments.length > 0) {
+      const requestedSessionKeyRaw =
+        typeof request.sessionKey === "string" && request.sessionKey.trim()
+          ? request.sessionKey.trim()
+          : undefined;
+
+      let baseProvider: string | undefined;
+      let baseModel: string | undefined;
+      if (requestedSessionKeyRaw) {
+        const {
+          cfg: sessCfg,
+          entry: sessEntry,
+          agentId: sessionAgentId,
+        } = loadSessionEntry(requestedSessionKeyRaw);
+        const modelRef = resolveSessionModelRef(sessCfg, sessEntry, sessionAgentId);
+        baseProvider = modelRef.provider;
+        baseModel = modelRef.model;
+      }
+      const effectiveProvider = providerOverride || baseProvider;
+      const effectiveModel = modelOverride || baseModel;
+      const supportsInlineImages = await resolveGatewayModelSupportsImages({
+        loadGatewayModelCatalog: context.loadGatewayModelCatalog,
+        provider: effectiveProvider,
+        model: effectiveModel,
+      });
+
+      try {
+        const parsed = await parseMessageWithAttachments(message, normalizedAttachments, {
+          maxBytes: resolveChatAttachmentMaxBytes(cfg),
+          log: context.logGateway,
+          supportsInlineImages,
+          // agent.run does not yet wire a ctx.MediaPaths stage path, so reject
+          // non-image attachments explicitly (UnsupportedAttachmentError)
+          // instead of saving them where the agent cannot reach them.
+          acceptNonImage: false,
+        });
+        message = parsed.message.trim();
+        images = parsed.images;
+        imageOrder = parsed.imageOrder;
+        // offloadedRefs are appended as text markers to `message`; the agent
+        // runner will resolve them via detectAndLoadPromptImages.
+      } catch (err) {
+        // MediaOffloadError indicates a server-side storage fault (ENOSPC, EPERM,
+        // etc.). Map it to UNAVAILABLE so clients can retry without treating it as
+        // a bad request. All other errors are input-validation failures → 4xx.
+        logAttachmentFailure(context.logGateway, "agent attachment parse failed", err);
+        const isServerFault = err instanceof MediaOffloadError;
+        respond(
+          false,
+          undefined,
+          errorShape(
+            isServerFault ? ErrorCodes.UNAVAILABLE : ErrorCodes.INVALID_REQUEST,
+            String(err),
+          ),
+        );
+        return;
+      }
+    }
+
+    // Accept internal non-delivery sources (heartbeat, cron, webhook) as valid
+    // channel hints so subagent spawns from those parent runs are not rejected.
+    const isKnownGatewayChannel = (value: string): boolean =>
+      isGatewayMessageChannel(value) || isInternalNonDeliveryChannel(value);
+    const channelHints = [request.channel, request.replyChannel]
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    for (const rawChannel of channelHints) {
+      const normalized = normalizeMessageChannel(rawChannel);
+      if (normalized && normalized !== "last" && !isKnownGatewayChannel(normalized)) {
+        respond(
+          false,
+          undefined,
+          errorShape(
+            ErrorCodes.INVALID_REQUEST,
+            `invalid agent params: unknown channel: ${normalized}`,
+          ),
+        );
+        return;
+      }
+    }
 
     const knownAgents = listAgentIds(cfg);
     const agentIdRaw = normalizeOptionalString(request.agentId) ?? "";
@@ -946,92 +904,10 @@ export const agentHandlers: GatewayRequestHandlers = {
         return;
       }
     }
-    // Reserve the run before awaited attachment/session/delivery work so duplicate calls dedupe and
-    // pre-registration chat.abort can be made durable by idempotency key.
-    const preAcceptedReservedSessionKey = requestedSessionKey;
-    reservePreAcceptedAgentDedupe(preAcceptedReservedSessionKey);
-
+    // Exec approval followups can retry with a fresh nonce for the same approval id.
+    // Reserve the stable alias before awaited session/delivery work so overlaps dedupe.
+    reserveExecApprovalFollowupDedupe();
     try {
-      let message = (request.message ?? "").trim();
-      if (!isRawModelRun) {
-        message = annotateInterSessionPromptText(message, inputProvenance);
-      }
-      let images: Array<{ type: "image"; data: string; mimeType: string }> = [];
-      let imageOrder: PromptImageOrderEntry[] = [];
-      if (normalizedAttachments.length > 0) {
-        let baseProvider: string | undefined;
-        let baseModel: string | undefined;
-        if (requestedSessionKeyRaw) {
-          const { cfg: sessCfg, entry: sessEntry } = loadSessionEntry(requestedSessionKeyRaw);
-          const sessionAgentId = resolveAgentIdFromSessionKey(requestedSessionKeyRaw);
-          const modelRef = resolveSessionModelRef(sessCfg, sessEntry, sessionAgentId);
-          baseProvider = modelRef.provider;
-          baseModel = modelRef.model;
-        }
-        const effectiveProvider = providerOverride || baseProvider;
-        const effectiveModel = modelOverride || baseModel;
-        const supportsInlineImages = await resolveGatewayModelSupportsImages({
-          loadGatewayModelCatalog: context.loadGatewayModelCatalog,
-          provider: effectiveProvider,
-          model: effectiveModel,
-        });
-
-        try {
-          const parsed = await parseMessageWithAttachments(message, normalizedAttachments, {
-            maxBytes: resolveChatAttachmentMaxBytes(cfg),
-            log: context.logGateway,
-            supportsInlineImages,
-            // agent.run does not yet wire a ctx.MediaPaths stage path, so reject
-            // non-image attachments explicitly (UnsupportedAttachmentError)
-            // instead of saving them where the agent cannot reach them.
-            acceptNonImage: false,
-          });
-          message = parsed.message.trim();
-          images = parsed.images;
-          imageOrder = parsed.imageOrder;
-          // offloadedRefs are appended as text markers to `message`; the agent
-          // runner will resolve them via detectAndLoadPromptImages.
-        } catch (err) {
-          // MediaOffloadError indicates a server-side storage fault (ENOSPC, EPERM,
-          // etc.). Map it to UNAVAILABLE so clients can retry without treating it as
-          // a bad request. All other errors are input-validation failures → 4xx.
-          logAttachmentFailure(context.logGateway, "agent attachment parse failed", err);
-          const isServerFault = err instanceof MediaOffloadError;
-          respond(
-            false,
-            undefined,
-            errorShape(
-              isServerFault ? ErrorCodes.UNAVAILABLE : ErrorCodes.INVALID_REQUEST,
-              String(err),
-            ),
-          );
-          return;
-        }
-      }
-
-      // Accept internal non-delivery sources (heartbeat, cron, webhook) as valid
-      // channel hints so subagent spawns from those parent runs are not rejected.
-      const isKnownGatewayChannel = (value: string): boolean =>
-        isGatewayMessageChannel(value) || isInternalNonDeliveryChannel(value);
-      const channelHints = [request.channel, request.replyChannel]
-        .filter((value): value is string => typeof value === "string")
-        .map((value) => value.trim())
-        .filter(Boolean);
-      for (const rawChannel of channelHints) {
-        const normalized = normalizeMessageChannel(rawChannel);
-        if (normalized && normalized !== "last" && !isKnownGatewayChannel(normalized)) {
-          respond(
-            false,
-            undefined,
-            errorShape(
-              ErrorCodes.INVALID_REQUEST,
-              `invalid agent params: unknown channel: ${normalized}`,
-            ),
-          );
-          return;
-        }
-      }
-
       const voiceWakeTrigger = normalizeOptionalString(request.voiceWakeTrigger) ?? "";
       const replyTo = normalizeOptionalString(request.replyTo) ?? "";
       const to = normalizeOptionalString(request.to) ?? "";
@@ -1215,8 +1091,7 @@ export const agentHandlers: GatewayRequestHandlers = {
           }),
           resetOverride: resolveChannelResetConfig({
             sessionCfg: cfg.session,
-            channel:
-              routingInfo?.channel ?? entry?.lastChannel ?? entry?.channel ?? request.channel,
+            channel: routingInfo?.channel ?? entry?.channel ?? request.channel,
           }),
         });
         const freshness = entry
@@ -1243,7 +1118,6 @@ export const agentHandlers: GatewayRequestHandlers = {
           !entry ||
           (!canReuseSession && !usableRequestedSessionId) ||
           Boolean(usableRequestedSessionId && entry?.sessionId !== usableRequestedSessionId);
-        const rotatedSessionId = Boolean(entry?.sessionId && entry.sessionId !== sessionId);
         const touchInteraction =
           request.bootstrapContextRunKind !== "cron" &&
           request.bootstrapContextRunKind !== "heartbeat" &&
@@ -1263,40 +1137,45 @@ export const agentHandlers: GatewayRequestHandlers = {
         ) {
           try {
             const parentEntry = loadSessionEntry(spawnedByValue)?.entry;
+            const parentGroupKey = parseGroupKey(spawnedByValue);
             inheritedGroup = normalizeTrustedGroupMetadata({
               groupId: parentEntry?.groupId,
               groupChannel: parentEntry?.groupChannel,
               groupSpace: parentEntry?.space,
+            });
+            inheritedGroup = normalizeTrustedGroupMetadata({
+              groupId: inheritedGroup.groupId ?? parentGroupKey?.id,
+              groupChannel: inheritedGroup.groupChannel,
+              groupSpace: inheritedGroup.groupSpace,
             });
           } catch {
             inheritedGroup = undefined;
           }
         }
         const trustedGroup = resolveTrustedGroupMetadata({
-          sessionKey: canonicalKey,
-          spawnedBy: spawnedByValue,
           stored: storedGroup,
           inherited: inheritedGroup,
+          typedGroupId:
+            routingInfo?.chatType === "group" || routingInfo?.chatType === "channel"
+              ? routingInfo.conversationPeerId
+              : parseGroupKey(canonicalKey)?.id,
         });
-        const validatedGroup = trustedGroup.groupId
-          ? resolveTrustedGroupId({
-              groupId: trustedGroup.groupId,
-              sessionKey: canonicalKey,
-              spawnedBy: spawnedByValue,
-            })
-          : undefined;
-        if (validatedGroup?.dropped) {
+        const trustRequestSelectors =
+          Boolean(trustedGroup.groupId) &&
+          requestGroupMatchesTrusted({
+            requestGroupId: normalizedSpawned.groupId,
+            trustedGroupId: trustedGroup.groupId,
+          });
+        if (!trustedGroup.groupId || !trustRequestSelectors) {
           resolvedGroupId = undefined;
           resolvedGroupChannel = undefined;
           resolvedGroupSpace = undefined;
         } else {
-          const trustRequestSelectors =
-            Boolean(trustedGroup.groupId) &&
-            requestGroupMatchesTrusted({
-              requestGroupId: normalizedSpawned.groupId,
-              trustedGroupId: trustedGroup.groupId,
-            });
-          resolvedGroupId = trustedGroup.groupId;
+          resolvedGroupId =
+            storedGroup.groupId ??
+            inheritedGroup?.groupId ??
+            normalizedSpawned.groupId ??
+            trustedGroup.groupId;
           resolvedGroupChannel =
             trustedGroup.groupChannel ??
             (trustRequestSelectors ? normalizedSpawned.groupChannel : undefined);
@@ -1304,12 +1183,14 @@ export const agentHandlers: GatewayRequestHandlers = {
             trustedGroup.groupSpace ??
             (trustRequestSelectors ? normalizedSpawned.groupSpace : undefined);
         }
-        const deliveryFields = normalizeSessionDeliveryFields(entry);
+        const deliveryFields = normalizeSessionDeliveryFields({
+          deliveryContext: entry?.deliveryContext,
+        });
         // When the session has no delivery context yet (e.g. a freshly-spawned subagent
         // with deliver: false), seed it from the request's channel/to/threadId params.
         // Without this, subagent sessions end up with a channel-only deliveryContext
         // and no `to`/`threadId`, which causes announce delivery to either target the
-        // wrong channel (when the parent's lastTo drifts) or fail entirely.
+        // wrong inherited route or fail entirely.
         const requestDeliveryHint = normalizeDeliveryContext({
           channel: request.channel?.trim(),
           to: request.to?.trim(),
@@ -1323,7 +1204,6 @@ export const agentHandlers: GatewayRequestHandlers = {
           requestDeliveryHint,
         );
         const effectiveDeliveryFields = normalizeSessionDeliveryFields({
-          route: deliveryFields.route,
           deliveryContext: effectiveDelivery,
         });
         const nextEntryPatch: SessionEntry = {
@@ -1346,36 +1226,22 @@ export const agentHandlers: GatewayRequestHandlers = {
           systemSent: entry?.systemSent,
           sendPolicy: entry?.sendPolicy,
           skillsSnapshot: entry?.skillsSnapshot,
-          route: effectiveDeliveryFields.route,
           deliveryContext: effectiveDeliveryFields.deliveryContext,
-          lastChannel: effectiveDeliveryFields.lastChannel ?? entry?.lastChannel,
-          lastTo: effectiveDeliveryFields.lastTo ?? entry?.lastTo,
-          lastAccountId: effectiveDeliveryFields.lastAccountId ?? entry?.lastAccountId,
-          lastThreadId: effectiveDeliveryFields.lastThreadId ?? entry?.lastThreadId,
           modelOverride: entry?.modelOverride,
           providerOverride: entry?.providerOverride,
           label: labelValue,
           spawnedBy: spawnedByValue,
           spawnedWorkspaceDir: entry?.spawnedWorkspaceDir,
           spawnDepth: entry?.spawnDepth,
-          channel: entry?.channel ?? request.channel?.trim(),
+          channel:
+            effectiveDeliveryFields.deliveryContext?.channel ??
+            entry?.channel ??
+            request.channel?.trim(),
           groupId: resolvedGroupId,
           groupChannel: resolvedGroupChannel,
           space: resolvedGroupSpace,
           ...(pluginOwnerId ? { pluginOwnerId } : {}),
-          ...(rotatedSessionId
-            ? {
-                status: undefined,
-                startedAt: undefined,
-                endedAt: undefined,
-                runtimeMs: undefined,
-                abortedLastRun: undefined,
-                sessionFile: undefined,
-              }
-            : { sessionFile: entry?.sessionFile }),
-          cliSessionIds: entry?.cliSessionIds,
           cliSessionBindings: entry?.cliSessionBindings,
-          claudeCliSessionId: entry?.claudeCliSessionId,
         };
         sessionEntry = mergeSessionEntry(entry, nextEntryPatch);
         if (request.deliver === true) {
@@ -1563,26 +1429,6 @@ export const agentHandlers: GatewayRequestHandlers = {
 
       const deliver = request.deliver === true && resolvedChannel !== INTERNAL_MESSAGE_CHANNEL;
 
-      const preRegistrationAbort = readGatewayDedupeEntry({
-        dedupe: context.dedupe,
-        keys: agentDedupeKeys,
-      });
-      if (
-        isPreRegistrationAbortedAgentDedupeEntryForSession({
-          entry: preRegistrationAbort,
-          runId,
-          sessionKey: resolvedSessionKey,
-          alternateSessionKeys: [preAcceptedReservedSessionKey, requestedSessionKey],
-        })
-      ) {
-        agentRunAccepted = true;
-        respond(true, preRegistrationAbort?.payload, undefined, {
-          cached: true,
-          runId,
-        });
-        return;
-      }
-
       // Register before the accepted ack so an immediate chat.abort/sessions.abort
       // cannot race the active-run entry. Agent RPC runs use the agent timeout;
       // chat.send keeps the shorter chat cleanup cap.
@@ -1611,15 +1457,15 @@ export const agentHandlers: GatewayRequestHandlers = {
         timeoutMs,
         now,
         expiresAtMs: resolveAgentRunExpiresAtMs({ now, timeoutMs }),
-        ownerConnId,
-        ownerDeviceId,
+        ownerConnId: typeof client?.connId === "string" ? client.connId : undefined,
+        ownerDeviceId:
+          typeof client?.connect?.device?.id === "string" ? client.connect.device.id : undefined,
         providerId: activeModelProvider,
         authProviderId: activeAuthProvider,
         kind: "agent",
       });
-      const existingRunAbort = context.chatAbortControllers.get(runId);
-      if (!activeRunAbort.registered && existingRunAbort) {
-        agentRunAccepted = existingRunAbort.kind === "agent";
+      if (!activeRunAbort.registered && context.chatAbortControllers.has(runId)) {
+        agentRunAccepted = true;
         respond(true, { runId, status: "in_flight" as const }, undefined, {
           cached: true,
           runId,
@@ -1629,15 +1475,8 @@ export const agentHandlers: GatewayRequestHandlers = {
 
       const accepted = {
         runId,
-        sessionKey: resolvedSessionKey,
         status: "accepted" as const,
         acceptedAt: Date.now(),
-      };
-      const acceptedDedupePayload = {
-        ...accepted,
-        dedupeKeys: agentDedupeKeys,
-        ownerConnId,
-        ownerDeviceId,
       };
       agentRunAccepted = true;
       // Store an in-flight ack so retries do not spawn a second run.
@@ -1647,7 +1486,7 @@ export const agentHandlers: GatewayRequestHandlers = {
         entry: {
           ts: Date.now(),
           ok: true,
-          payload: acceptedDedupePayload,
+          payload: accepted,
         },
       });
       respond(true, accepted, undefined, { runId });
@@ -1660,28 +1499,6 @@ export const agentHandlers: GatewayRequestHandlers = {
 
         let dispatched = false;
         try {
-          if (activeRunAbort.controller.signal.aborted) {
-            const stopReason = resolveAbortedAgentStopReason(activeRunAbort.entry);
-            setAbortedAgentDedupeEntries({
-              dedupe: context.dedupe,
-              keys: agentDedupeKeys,
-              runId,
-              stopReason,
-            });
-            respond(
-              true,
-              {
-                runId,
-                status: "timeout" as const,
-                summary: "aborted",
-                stopReason,
-              },
-              undefined,
-              { runId },
-            );
-            return;
-          }
-
           if (resolvedSessionKey) {
             await reactivateCompletedSubagentSession({
               sessionKey: resolvedSessionKey,
@@ -1808,10 +1625,11 @@ export const agentHandlers: GatewayRequestHandlers = {
               internalEvents: request.internalEvents,
               inputProvenance,
               sourceReplyDeliveryMode: request.sourceReplyDeliveryMode,
-              suppressPromptPersistence: shouldSuppressAgentPromptPersistence({
+              suppressPromptPersistence: shouldSuppressPromptPersistenceForAgentRun({
                 inputProvenance,
                 internalEvents: request.internalEvents,
               }),
+              initialVfsEntries: request.initialVfsEntries,
               cleanupBundleMcpOnRunEnd: request.cleanupBundleMcpOnRunEnd,
               abortSignal: activeRunAbort.controller.signal,
               onActiveModelSelected: ({ provider }) => {
@@ -1828,9 +1646,11 @@ export const agentHandlers: GatewayRequestHandlers = {
                 spawnedBy: spawnedByValue,
                 workspaceDir: sessionEntry?.spawnedWorkspaceDir,
               }),
+              senderIsOwner,
               allowModelOverride,
             },
             runId,
+            idempotencyKey: idem,
             dedupeKeys: agentDedupeKeys,
             abortController: activeRunAbort.controller,
             respond,
