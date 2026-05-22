@@ -785,11 +785,12 @@ async function cancelQueuedSteeringMessage(
   return true;
 }
 
-export const testing = {
+export const __testing = {
   cancelQueuedSteeringMessage,
-  resolveAttemptStreamAuthProfileId,
   steerAndWaitForTranscriptCommit,
+  resolveAttemptStreamAuthProfileId,
 };
+export { __testing as testing };
 
 function resolveAttemptStreamAuthProfileId(
   params: Pick<EmbeddedRunAttemptParams, "authProfileId" | "runtimePlan">,

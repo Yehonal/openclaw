@@ -1059,3 +1059,4 @@ export const __testing = {
   shouldSkipStartupModelPrewarm,
   stopPostReadySidecarsAfterCloseStarted,
 };
+export { __testing as testing };
