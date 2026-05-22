@@ -1,11 +1,5 @@
 import { spawn } from "node:child_process";
 import os from "node:os";
-import type {
-  AgentMessage,
-  AgentToolResult,
-  AgentToolUpdateCallback,
-} from "@earendil-works/pi-agent-core";
-import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { getPluginToolMeta } from "../plugins/tools.js";
@@ -13,7 +7,9 @@ import {
   isToolWrappedWithBeforeToolCallHook,
   type HookContext,
   wrapToolWithBeforeToolCallHook,
-} from "./pi-tools.before-tool-call.js";
+} from "./agent-tools.before-tool-call.js";
+import type { AgentMessage, AgentToolResult, AgentToolUpdateCallback } from "./runtime/index.js";
+import type { ToolDefinition } from "./sessions/index.js";
 import { asToolParamsRecord, jsonResult, ToolInputError } from "./tools/common.js";
 import type { AnyAgentTool } from "./tools/common.js";
 

@@ -1,4 +1,4 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
+import type { Api, Model } from "openclaw/plugin-sdk/llm";
 import { detectOpenAICompletionsCompat } from "../agents/openai-completions-compat.js";
 import type { ModelCompatConfig } from "../config/types.models.js";
 

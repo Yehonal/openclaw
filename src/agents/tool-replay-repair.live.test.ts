@@ -1,10 +1,12 @@
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type { Api, Context, Model } from "@earendil-works/pi-ai";
-import { SessionManager } from "@earendil-works/pi-coding-agent";
+import type { AgentMessage } from "openclaw/plugin-sdk/agent-core";
+import { SessionManager } from "openclaw/plugin-sdk/agent-sessions";
+import type { Api, Context, Model } from "openclaw/plugin-sdk/llm";
 import { Type } from "typebox";
 import { describe, expect, it } from "vitest";
 import { getRuntimeConfig } from "../config/config.js";
+import { discoverAuthStorage, discoverModels } from "./agent-model-discovery.js";
 import { resolveDefaultAgentDir } from "./agent-scope.js";
+import { sanitizeSessionHistory } from "./embedded-agent-runner/replay-history.js";
 import {
   completeSimpleWithTimeout,
   type CompleteSimpleContent,
@@ -14,8 +16,6 @@ import {
 } from "./live-test-helpers.js";
 import { getApiKeyForModel, requireApiKey } from "./model-auth.js";
 import { ensureOpenClawModelsJson } from "./models-config.js";
-import { sanitizeSessionHistory } from "./pi-embedded-runner/replay-history.js";
-import { discoverAuthStorage, discoverModels } from "./pi-model-discovery.js";
 import { transformTransportMessages } from "./transport-message-transform.js";
 
 const LIVE = isLiveTestEnabled();

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { CURRENT_SESSION_VERSION } from "@earendil-works/pi-coding-agent";
+import { CURRENT_SESSION_VERSION } from "openclaw/plugin-sdk/agent-sessions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionEntry } from "../../config/sessions/types.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
@@ -114,7 +114,7 @@ describe("runCliTurnCompactionLifecycle", () => {
     const maintenance = vi.fn(async () => ({ changed: false, bytesFreed: 0, rewrittenEntries: 0 }));
     setCliCompactionTestDeps({
       resolveContextEngine: async () => buildContextEngine({ compactCalls }),
-      createPreparedEmbeddedPiSettingsManager: async () => ({
+      createPreparedEmbeddedAgentSettingsManager: async () => ({
         getCompactionReserveTokens: () => 200,
         getCompactionKeepRecentTokens: () => 0,
         applyOverrides: () => {},
@@ -859,7 +859,7 @@ describe("runCliTurnCompactionLifecycle", () => {
         calls.push("resolve");
         return buildContextEngine({ compactCalls: [] });
       },
-      createPreparedEmbeddedPiSettingsManager: async () => ({
+      createPreparedEmbeddedAgentSettingsManager: async () => ({
         getCompactionReserveTokens: () => 200,
         getCompactionKeepRecentTokens: () => 0,
         applyOverrides: () => {},
@@ -927,7 +927,7 @@ describe("runCliTurnCompactionLifecycle", () => {
           return await new Promise(() => {});
         },
       }),
-      createPreparedEmbeddedPiSettingsManager: async () => ({
+      createPreparedEmbeddedAgentSettingsManager: async () => ({
         getCompactionReserveTokens: () => 200,
         getCompactionKeepRecentTokens: () => 0,
         applyOverrides: () => {},

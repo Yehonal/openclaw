@@ -4,16 +4,16 @@ import {
   type Api,
   type AssistantMessage,
   type Model,
-} from "@earendil-works/pi-ai";
+} from "openclaw/plugin-sdk/llm";
 import { getRuntimeConfig } from "../config/config.js";
 import { isTruthyEnvValue } from "../infra/env.js";
+import { discoverAuthStorage, discoverModels } from "./agent-model-discovery.js";
 import { resolveDefaultAgentDir } from "./agent-scope.js";
 import { collectProviderApiKeys } from "./live-auth-keys.js";
 import { isLiveTestEnabled } from "./live-test-helpers.js";
 import { getApiKeyForModel, requireApiKey } from "./model-auth.js";
 import { normalizeProviderId, parseModelRef } from "./model-selection.js";
 import { ensureOpenClawModelsJson } from "./models-config.js";
-import { discoverAuthStorage, discoverModels } from "./pi-model-discovery.js";
 import { buildAssistantMessageWithZeroUsage } from "./stream-message-shared.js";
 
 export const LIVE_CACHE_TEST_ENABLED =

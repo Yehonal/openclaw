@@ -1,4 +1,4 @@
-import type { Api, AssistantMessage, Context, Model } from "@earendil-works/pi-ai";
+import type { Api, AssistantMessage, Context, Model } from "openclaw/plugin-sdk/llm";
 
 export const LIVE_MODEL_FILE_PROBE_TOKEN = "opal";
 

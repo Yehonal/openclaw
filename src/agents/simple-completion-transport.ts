@@ -1,4 +1,4 @@
-import { getApiProvider, type Api, type Model } from "@earendil-works/pi-ai";
+import { getApiProvider, type Api, type Model } from "openclaw/plugin-sdk/llm";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { createAnthropicVertexStreamFnForModel } from "./anthropic-vertex-stream.js";
 import { ensureCustomApiRegistered } from "./custom-api-registry.js";

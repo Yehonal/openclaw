@@ -1,5 +1,4 @@
-import type { StreamFn } from "@earendil-works/pi-agent-core";
-import type { Api, Model } from "@earendil-works/pi-ai";
+import type { Api, Model } from "openclaw/plugin-sdk/llm";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { resolveProviderStreamFn } from "../plugins/provider-runtime.js";
 import { createAnthropicMessagesTransportStreamFn } from "./anthropic-transport-stream.js";
@@ -10,6 +9,7 @@ import {
 } from "./openai-transport-stream.js";
 import { getModelProviderLocalService } from "./provider-local-service.js";
 import { getModelProviderRequestTransport } from "./provider-request-config.js";
+import type { StreamFn } from "./runtime/index.js";
 
 const SUPPORTED_TRANSPORT_APIS = new Set<Api>([
   "openai-responses",

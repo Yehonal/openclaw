@@ -1,11 +1,10 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
-import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { resolveDefaultAgentDir } from "../../agents/agent-scope.js";
+import type { Api, Model } from "openclaw/plugin-sdk/llm";
+import { loadAgentModelRegistry } from "../../agents/model-registry-loader.js";
 import {
   shouldSuppressBuiltInModel,
   shouldSuppressBuiltInModelFromManifest,
 } from "../../agents/model-suppression.js";
-import { discoverAuthStorage, discoverModels } from "../../agents/pi-model-discovery.js";
+import type { ModelRegistry } from "../../agents/sessions/index.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import {
   formatErrorWithStack,
@@ -95,14 +94,9 @@ export async function loadModelRegistry(
   },
 ) {
   const runtimeSuppression = opts?.normalizeModels !== false;
-  const agentDir = resolveDefaultAgentDir(cfg);
-  const authStorage = discoverAuthStorage(agentDir, {
-    readOnly: true,
+  const { registry } = loadAgentModelRegistry(cfg, {
     skipCredentials: opts?.loadAvailability === false,
-    config: cfg,
     workspaceDir: opts?.workspaceDir,
-  });
-  const registry = discoverModels(authStorage, agentDir, {
     providerFilter: opts?.providerFilter,
     normalizeModels: opts?.normalizeModels,
   });

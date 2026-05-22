@@ -12,9 +12,10 @@ import {
   type KnownProvider,
   type Model,
   type ModelThinkingLevel,
-} from "@earendil-works/pi-ai";
+} from "openclaw/plugin-sdk/llm";
 import { afterEach, describe, expect, it } from "vitest";
 import { renderCatNoncePngBase64 } from "../../test/helpers/live-image-probe.js";
+import { discoverAuthStorage, discoverModels } from "../agents/agent-model-discovery.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentDir } from "../agents/agent-scope.js";
 import {
   ensureAuthProfileStore,
@@ -43,7 +44,6 @@ import { getApiKeyForModel, resolveEnvApiKey } from "../agents/model-auth.js";
 import { normalizeProviderId } from "../agents/model-selection.js";
 import { shouldSuppressBuiltInModel } from "../agents/model-suppression.js";
 import { ensureOpenClawModelsJson } from "../agents/models-config.js";
-import { discoverAuthStorage, discoverModels } from "../agents/pi-model-discovery.js";
 import { STREAM_ERROR_FALLBACK_TEXT } from "../agents/stream-message-shared.js";
 import { clearRuntimeConfigSnapshot, getRuntimeConfig } from "../config/io.js";
 import type { ModelsConfig, ModelProviderConfig, OpenClawConfig } from "../config/types.js";
@@ -1860,7 +1860,6 @@ async function runGatewayModelSuite(params: GatewayModelSuiteParams) {
     disableBonjour: process.env.OPENCLAW_DISABLE_BONJOUR,
     logLevel: process.env.OPENCLAW_LOG_LEVEL,
     agentDir: process.env.OPENCLAW_AGENT_DIR,
-    piAgentDir: process.env.PI_CODING_AGENT_DIR,
     stateDir: process.env.OPENCLAW_STATE_DIR,
   };
   let tempAgentDir: string | undefined;
@@ -1901,7 +1900,6 @@ async function runGatewayModelSuite(params: GatewayModelSuiteParams) {
     saveAuthProfileStore(sanitizedStore, tempSessionAgentDir);
   }
   process.env.OPENCLAW_AGENT_DIR = tempAgentDir;
-  process.env.PI_CODING_AGENT_DIR = tempAgentDir;
 
   const workspaceDir = resolveAgentWorkspaceDir(params.cfg, agentId);
   await fs.mkdir(workspaceDir, { recursive: true });
@@ -2618,7 +2616,6 @@ async function runGatewayModelSuite(params: GatewayModelSuiteParams) {
     process.env.OPENCLAW_DISABLE_BONJOUR = previous.disableBonjour;
     process.env.OPENCLAW_LOG_LEVEL = previous.logLevel;
     process.env.OPENCLAW_AGENT_DIR = previous.agentDir;
-    process.env.PI_CODING_AGENT_DIR = previous.piAgentDir;
     process.env.OPENCLAW_STATE_DIR = previous.stateDir;
   }
 }

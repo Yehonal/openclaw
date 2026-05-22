@@ -5,6 +5,10 @@ import {
   resolveBundledProviderCompatPluginIds,
   resolveOwningPluginIdsForProvider,
 } from "../../plugins/providers.js";
+import {
+  isDefaultAgentRuntimeId,
+  normalizeOptionalAgentRuntimeId,
+} from "../embedded-agent-runner/runtime.js";
 import { resolveAgentHarnessPolicy } from "./policy.js";
 
 function dedupePluginIds(values: readonly string[]): string[] {
@@ -97,7 +101,7 @@ export async function ensureSelectedAgentHarnessPlugin(params: {
   agentHarnessRuntimeOverride?: string;
   workspaceDir: string;
 }): Promise<void> {
-  const runtimeOverride = params.agentHarnessRuntimeOverride?.trim();
+  const runtimeOverride = normalizeOptionalAgentRuntimeId(params.agentHarnessRuntimeOverride);
   const policy = resolveAgentHarnessPolicy({
     provider: params.provider,
     modelId: params.modelId,
@@ -106,9 +110,7 @@ export async function ensureSelectedAgentHarnessPlugin(params: {
     sessionKey: params.sessionKey,
   });
   const runtime =
-    runtimeOverride && runtimeOverride !== "auto" && runtimeOverride !== "default"
-      ? runtimeOverride
-      : policy.runtime;
+    runtimeOverride && !isDefaultAgentRuntimeId(runtimeOverride) ? runtimeOverride : policy.runtime;
   if (runtime !== "codex") {
     return;
   }

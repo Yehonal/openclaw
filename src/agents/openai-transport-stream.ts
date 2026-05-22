@@ -1,15 +1,4 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { StreamFn } from "@earendil-works/pi-agent-core";
-import {
-  calculateCost,
-  createAssistantMessageEventStream,
-  getEnvApiKey,
-  parseStreamingJson,
-  type Api,
-  type Context,
-  type Model,
-} from "@earendil-works/pi-ai";
-import { convertMessages } from "@earendil-works/pi-ai/openai-completions";
 import OpenAI, { AzureOpenAI } from "openai";
 import type { ChatCompletionChunk } from "openai/resources/chat/completions.js";
 import type {
@@ -23,6 +12,16 @@ import type {
   ResponseOutputMessage,
   ResponseReasoningItem,
 } from "openai/resources/responses/responses.js";
+import {
+  calculateCost,
+  createAssistantMessageEventStream,
+  getEnvApiKey,
+  parseStreamingJson,
+  type Api,
+  type Context,
+  type Model,
+} from "openclaw/plugin-sdk/llm";
+import { convertMessages } from "openclaw/plugin-sdk/llm-openai-completions";
 import type { ModelCompatConfig } from "../config/types.models.js";
 import { redactIdentifier } from "../logging/redact-identifier.js";
 import { redactSensitiveText } from "../logging/redact.js";
@@ -67,6 +66,7 @@ import {
   resolveModelRequestTimeoutMs,
 } from "./provider-transport-fetch.js";
 import { sanitizeResponsesImagePayload } from "./responses-image-payload-sanitizer.js";
+import type { StreamFn } from "./runtime/index.js";
 import { stripSystemPromptCacheBoundary } from "./system-prompt-cache-boundary.js";
 import { transformTransportMessages } from "./transport-message-transform.js";
 import {
@@ -1833,7 +1833,7 @@ function resolveCacheRetention(cacheRetention: string | undefined): "short" | "l
   if (cacheRetention === "short" || cacheRetention === "long" || cacheRetention === "none") {
     return cacheRetention;
   }
-  if (typeof process !== "undefined" && process.env.PI_CACHE_RETENTION === "long") {
+  if (typeof process !== "undefined" && process.env.OPENCLAW_CACHE_RETENTION === "long") {
     return "long";
   }
   return "short";

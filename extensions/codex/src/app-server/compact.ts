@@ -6,8 +6,8 @@ import {
   resolveCompactionTimeoutMs,
   resolveContextEngineOwnerPluginId,
   runHarnessContextEngineMaintenance,
-  type CompactEmbeddedPiSessionParams,
-  type EmbeddedPiCompactResult,
+  type CompactEmbeddedAgentSessionParams,
+  type EmbeddedAgentCompactResult,
 } from "openclaw/plugin-sdk/agent-harness-runtime";
 import {
   defaultCodexAppServerClientFactory,
@@ -35,9 +35,9 @@ const CODEX_COMPACTION_TOKEN_USAGE_GRACE_MS = 250;
 const warnedIgnoredCompactionOverrides = new Set<string>();
 
 export async function maybeCompactCodexAppServerSession(
-  params: CompactEmbeddedPiSessionParams,
+  params: CompactEmbeddedAgentSessionParams,
   options: { pluginConfig?: unknown; clientFactory?: CodexAppServerClientFactory } = {},
-): Promise<EmbeddedPiCompactResult | undefined> {
+): Promise<EmbeddedAgentCompactResult | undefined> {
   const activeContextEngine = isActiveHarnessContextEngine(params.contextEngine)
     ? params.contextEngine
     : undefined;
@@ -69,9 +69,9 @@ export async function maybeCompactCodexAppServerSession(
 }
 
 async function compactOwningContextEngine(
-  params: CompactEmbeddedPiSessionParams,
-  contextEngine: NonNullable<CompactEmbeddedPiSessionParams["contextEngine"]>,
-): Promise<EmbeddedPiCompactResult> {
+  params: CompactEmbeddedAgentSessionParams,
+  contextEngine: NonNullable<CompactEmbeddedAgentSessionParams["contextEngine"]>,
+): Promise<EmbeddedAgentCompactResult> {
   const compactionTarget = params.trigger === "manual" ? "threshold" : "budget";
   const force = params.force === true || params.trigger === "manual";
   embeddedAgentLog.info("starting context-engine-owned Codex app-server compaction", {
@@ -193,7 +193,9 @@ function mergeContextEngineCompactionDetails(
   return extra;
 }
 
-function warnIfIgnoringOpenClawCompactionOverrides(params: CompactEmbeddedPiSessionParams): void {
+function warnIfIgnoringOpenClawCompactionOverrides(
+  params: CompactEmbeddedAgentSessionParams,
+): void {
   const activeContextEngine = isActiveHarnessContextEngine(params.contextEngine)
     ? params.contextEngine
     : undefined;
@@ -217,8 +219,8 @@ function warnIfIgnoringOpenClawCompactionOverrides(params: CompactEmbeddedPiSess
 }
 
 function readIgnoredCompactionOverridePaths(
-  params: CompactEmbeddedPiSessionParams,
-  activeContextEngine?: CompactEmbeddedPiSessionParams["contextEngine"],
+  params: CompactEmbeddedAgentSessionParams,
+  activeContextEngine?: CompactEmbeddedAgentSessionParams["contextEngine"],
 ): string[] {
   const ignored = new Set<string>();
   const configuredContextEngine = readStringPath(params.config, [
@@ -262,7 +264,7 @@ function readIgnoredCompactionOverridePaths(
   return [...ignored];
 }
 
-function readCompactionOverrideEntries(params: CompactEmbeddedPiSessionParams): Array<{
+function readCompactionOverrideEntries(params: CompactEmbeddedAgentSessionParams): Array<{
   path: string;
   record: Record<string, unknown>;
   inheritedRecord?: Record<string, unknown>;
@@ -324,9 +326,9 @@ function readStringPath(value: unknown, path: readonly string[]): string | undef
 }
 
 async function compactCodexNativeThread(
-  params: CompactEmbeddedPiSessionParams,
+  params: CompactEmbeddedAgentSessionParams,
   options: { pluginConfig?: unknown; clientFactory?: CodexAppServerClientFactory } = {},
-): Promise<EmbeddedPiCompactResult | undefined> {
+): Promise<EmbeddedAgentCompactResult | undefined> {
   const sandboxBlock = resolveCodexNativeSandboxBlock({
     config: params.config,
     sessionKey: params.sandboxSessionKey ?? params.sessionKey,
@@ -424,13 +426,13 @@ async function compactCodexNativeThread(
 }
 
 function failedCodexThreadBindingCompactionResult(
-  params: CompactEmbeddedPiSessionParams,
+  params: CompactEmbeddedAgentSessionParams,
   recovery: {
     reason: string;
     recovery: "missing_thread_binding" | "stale_thread_binding";
     threadId?: string;
   },
-): EmbeddedPiCompactResult {
+): EmbeddedAgentCompactResult {
   embeddedAgentLog.warn("codex app-server compaction could not use thread binding", {
     sessionId: params.sessionId,
     sessionKey: params.sessionKey,

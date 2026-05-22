@@ -22,15 +22,17 @@ minimumReleaseAgeExclude:
   - "vite"
   - "@cloudflare/workers-types"
   - "@hono/node-server"
-  - "@mariozechner/*"
-  - "@aws-sdk/core"
-  - "@earendil-works/pi-agent-core"
-  - "@earendil-works/pi-ai"
-  - "@earendil-works/pi-coding-agent"
+  - "@aws-sdk/*"
+  - "@aws-sdk/client-bedrock-runtime"
   - "@earendil-works/pi-tui"
   - "@openai/codex"
   - "@openai/codex-*"
-  - "@smithy/shared-ini-file-loader@4.5.1"
+  - "@smithy/*"
+  - "@smithy/node-http-handler"
+  - "@smithy/node-http-handler@4.7.3"
+  - "@smithy/shared-ini-file-loader@4.5.3"
+  - "@smithy/types"
+  - "@smithy/types@4.14.2"
   - "@typescript/native-preview*"
   - "@types/node"
   - "@rolldown/*"
@@ -51,7 +53,6 @@ overrides:
   "@anthropic-ai/sdk": 0.97.1
   hono: 4.12.18
   "@hono/node-server": 1.19.14
-  "@aws-sdk/client-bedrock-runtime": 3.1051.0
   axios: 1.16.0
   fast-uri: 3.1.2
   follow-redirects: 1.16.0
@@ -93,11 +94,6 @@ allowBuilds:
   tree-sitter-bash: false
   openclaw: true
   "@openclaw/proxyline": true
-
-packageExtensions:
-  "@earendil-works/pi-coding-agent":
-    dependencies:
-      strip-ansi: 7.2.0
 
 peerDependencyRules:
   allowedVersions:

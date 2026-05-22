@@ -1,4 +1,4 @@
-import type { Model } from "@earendil-works/pi-ai";
+import type { Model } from "openclaw/plugin-sdk/llm";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModelProviderConfig } from "../config/config.js";
 import type { AuthProfileStore } from "./auth-profiles.js";
@@ -325,15 +325,15 @@ describe("resolveModelAuthMode", () => {
     ).toBe("aws-sdk");
   });
 
-  it("returns aws-sdk for bedrock alias without explicit auth override", () => {
+  it("does not infer aws-sdk for bedrock alias without explicit auth override", () => {
     expect(resolveModelAuthMode("bedrock", undefined, { version: 1, profiles: {} })).toBe(
-      "aws-sdk",
+      "unknown",
     );
   });
 
-  it("returns aws-sdk for aws-bedrock alias without explicit auth override", () => {
+  it("does not infer aws-sdk for aws-bedrock alias without explicit auth override", () => {
     expect(resolveModelAuthMode("aws-bedrock", undefined, { version: 1, profiles: {} })).toBe(
-      "aws-sdk",
+      "unknown",
     );
   });
 
@@ -1302,7 +1302,7 @@ describe("resolveApiKeyForProvider – synthetic local auth for custom providers
     ).rejects.toThrow('No API key found for provider "custom"');
   });
 
-  it("keeps built-in aws-sdk fallback for local baseUrl overrides", async () => {
+  it("uses explicit aws-sdk auth for local baseUrl overrides", async () => {
     const auth = await resolveApiKeyForProvider({
       provider: "amazon-bedrock",
       cfg: {
@@ -1311,6 +1311,7 @@ describe("resolveApiKeyForProvider – synthetic local auth for custom providers
             "amazon-bedrock": {
               baseUrl: "http://127.0.0.1:8080/v1",
               models: [],
+              auth: "aws-sdk",
             },
           },
         },

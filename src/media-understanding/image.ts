@@ -4,8 +4,9 @@ import type {
   Context,
   Model,
   ProviderStreamOptions,
-} from "@earendil-works/pi-ai";
-import { complete } from "@earendil-works/pi-ai";
+} from "openclaw/plugin-sdk/llm";
+import { complete } from "openclaw/plugin-sdk/llm";
+import { resolveModelAsync } from "../agents/embedded-agent-runner/model.js";
 import { isMinimaxVlmModel, minimaxUnderstandImage } from "../agents/minimax-vlm.js";
 import {
   getApiKeyForModel,
@@ -14,7 +15,6 @@ import {
 } from "../agents/model-auth.js";
 import { normalizeModelRef } from "../agents/model-selection.js";
 import { ensureOpenClawModelsJson } from "../agents/models-config.js";
-import { resolveModelAsync } from "../agents/pi-embedded-runner/model.js";
 import { resolveProviderRequestCapabilities } from "../agents/provider-attribution.js";
 import { registerProviderStreamForModel } from "../agents/provider-stream.js";
 import {
@@ -154,7 +154,7 @@ async function resolveImageRuntime(params: {
     params.cfg,
     {
       allowBundledStaticCatalogFallback: true,
-      skipPiDiscovery: true,
+      skipAgentDiscovery: true,
       skipProviderRuntimeHooks: true,
       ...(params.workspaceDir ? { workspaceDir: params.workspaceDir } : {}),
     },
@@ -167,7 +167,7 @@ async function resolveImageRuntime(params: {
       params.cfg,
       {
         allowBundledStaticCatalogFallback: true,
-        skipPiDiscovery: true,
+        skipAgentDiscovery: true,
         ...(params.workspaceDir ? { workspaceDir: params.workspaceDir } : {}),
       },
     );

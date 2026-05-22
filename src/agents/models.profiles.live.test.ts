@@ -6,14 +6,20 @@ import {
   getProviders,
   type KnownProvider,
   type Model,
-} from "@earendil-works/pi-ai";
+} from "openclaw/plugin-sdk/llm";
 import { Type } from "typebox";
 import { describe, expect, it } from "vitest";
 import { getRuntimeConfig } from "../config/config.js";
 import { parseLiveCsvFilter } from "../media-generation/live-test-helpers.js";
 import { runTasksWithConcurrency } from "../utils/run-with-concurrency.js";
+import {
+  discoverAuthStorage,
+  discoverModels,
+  normalizeDiscoveredAgentModel,
+} from "./agent-model-discovery.js";
 import { resolveDefaultAgentDir } from "./agent-scope.js";
 import { externalCliDiscoveryForProviders } from "./auth-profiles/external-cli-discovery.js";
+import { isRateLimitErrorMessage } from "./embedded-agent-helpers/errors.js";
 import { collectAnthropicApiKeys } from "./live-auth-keys.js";
 import { isModelNotFoundErrorMessage } from "./live-model-errors.js";
 import {
@@ -50,12 +56,6 @@ import {
 import { getApiKeyForModel, requireApiKey } from "./model-auth.js";
 import { shouldSuppressBuiltInModel } from "./model-suppression.js";
 import { ensureOpenClawModelsJson } from "./models-config.js";
-import { isRateLimitErrorMessage } from "./pi-embedded-helpers/errors.js";
-import {
-  discoverAuthStorage,
-  discoverModels,
-  normalizeDiscoveredPiModel,
-} from "./pi-model-discovery.js";
 
 const LIVE = isLiveTestEnabled();
 const DIRECT_ENABLED = Boolean(process.env.OPENCLAW_LIVE_MODELS?.trim());
@@ -872,7 +872,7 @@ describeLive("live models (profile keys)", () => {
             continue;
           }
           candidates.push({
-            model: normalizeDiscoveredPiModel(model, agentDir),
+            model: normalizeDiscoveredAgentModel(model, agentDir),
             apiKeyInfo,
           });
         } catch (err) {

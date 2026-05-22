@@ -1,4 +1,4 @@
-import type { Api, Model } from "@earendil-works/pi-ai";
+import type { Api, Model } from "openclaw/plugin-sdk/llm";
 import { loadAuthProfileStoreWithoutExternalProfiles } from "../../agents/auth-profiles/store.js";
 import {
   createProviderApiKeyResolver,

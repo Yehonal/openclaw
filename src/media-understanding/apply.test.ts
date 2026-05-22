@@ -194,7 +194,6 @@ async function withMediaAutoDetectEnv<T>(
       DEEPGRAM_API_KEY: undefined,
       GEMINI_API_KEY: undefined,
       OPENCLAW_AGENT_DIR: undefined,
-      PI_CODING_AGENT_DIR: undefined,
       ...env,
     },
     run,
@@ -923,7 +922,6 @@ describe("applyMediaUnderstanding", () => {
       {
         PATH: emptyBinDir,
         OPENCLAW_AGENT_DIR: isolatedAgentDir,
-        PI_CODING_AGENT_DIR: isolatedAgentDir,
       },
       async () => {
         const result = await applyMediaUnderstanding({ ctx, cfg });

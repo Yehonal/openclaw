@@ -1,4 +1,4 @@
-import { completeSimple, getModel, type Api, type Model } from "@earendil-works/pi-ai";
+import { completeSimple, getModel, type Api, type Model } from "openclaw/plugin-sdk/llm";
 
 type Usage = {
   input?: number;

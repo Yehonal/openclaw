@@ -1,6 +1,6 @@
-import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
 import { redactSensitiveText } from "../logging/redact.js";
 import { truncateErrorDetail } from "./provider-http-errors.js";
+import { createAssistantMessageEventStream } from "openclaw/plugin-sdk/llm";
 
 type TransportUsage = {
   input: number;

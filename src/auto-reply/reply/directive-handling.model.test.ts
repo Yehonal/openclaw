@@ -689,7 +689,7 @@ describe("/model chat UX", () => {
     expect(reply?.text).not.toContain("via codex runtime");
   });
 
-  it("does not borrow Codex auth when OpenAI model policy pins PI runtime", async () => {
+  it("does not borrow Codex auth when OpenAI model policy pins OpenClaw runtime", async () => {
     setAuthProfiles({
       "openai-codex:patrick@example.test": {
         type: "oauth",
@@ -713,7 +713,7 @@ describe("/model chat UX", () => {
             model: { primary: "openai/gpt-5.5" },
             models: {
               "openai/gpt-5.5": {
-                agentRuntime: { id: "pi" },
+                agentRuntime: { id: "openclaw" },
               },
             },
           },

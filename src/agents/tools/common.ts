@@ -1,13 +1,9 @@
-import type {
-  AgentTool,
-  AgentToolResult,
-  AgentToolUpdateCallback,
-} from "@earendil-works/pi-agent-core";
 import type { TSchema } from "typebox";
 import { readLocalFileSafely } from "../../infra/fs-safe.js";
 import { detectMime } from "../../media/mime.js";
 import { readSnakeCaseParamRaw } from "../../param-key.js";
 import type { ImageSanitizationLimits } from "../image-sanitization.js";
+import type { AgentTool, AgentToolResult, AgentToolUpdateCallback } from "../runtime/index.js";
 import { sanitizeToolResultImages } from "../tool-images.js";
 
 export type AgentToolWithMeta<TParameters extends TSchema, TResult> = AgentTool<
