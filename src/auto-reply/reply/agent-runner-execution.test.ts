@@ -36,13 +36,13 @@ const GENERIC_RUN_FAILURE_TEXT =
   "⚠️ Something went wrong while processing your request. Please try again, or use /new to start a fresh session.";
 
 describe("resolveSessionRuntimeOverrideForProvider", () => {
-  it("normalizes legacy pi session runtime pins to the OpenClaw runtime", () => {
+  it("ignores unsupported session runtime pins", () => {
     expect(
       resolveSessionRuntimeOverrideForProvider({
         provider: "openai",
-        entry: { agentRuntimeOverride: "pi" },
+        entry: { agentRuntimeOverride: "unsupported-runtime" },
       }),
-    ).toBe("openclaw");
+    ).toBeUndefined();
   });
 });
 

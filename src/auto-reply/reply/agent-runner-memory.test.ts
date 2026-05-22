@@ -583,13 +583,13 @@ describe("runMemoryFlushIfNeeded", () => {
     });
   });
 
-  it("normalizes legacy runtime pins before memory-flush fallback preflight", async () => {
+  it("ignores stale runtime pins before memory-flush fallback preflight", async () => {
     const sessionEntry: SessionEntry = {
       sessionId: "session",
       updatedAt: Date.now(),
       totalTokens: 80_000,
       compactionCount: 1,
-      agentRuntimeOverride: "pi",
+      agentRuntimeOverride: "unsupported-runtime",
     };
 
     await runMemoryFlushIfNeeded({
@@ -611,7 +611,7 @@ describe("runMemoryFlushIfNeeded", () => {
 
     expect(
       requireModelFallbackCall().resolveAgentHarnessRuntimeOverride?.("openai", "gpt-5.4"),
-    ).toBe("openclaw");
+    ).toBeUndefined();
   });
 
   it("skips memory flush for CLI providers", async () => {
