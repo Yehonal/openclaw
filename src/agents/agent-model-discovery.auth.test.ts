@@ -77,7 +77,7 @@ async function readLegacyAuthJson(agentDir: string): Promise<Record<string, unkn
 }
 
 describe("discoverAuthStorage", () => {
-  it("converts runtime auth profiles into pi discovery credentials", () => {
+  it("converts runtime auth profiles into agent discovery credentials", () => {
     const credentials = resolveAgentCredentialMapFromStore({
       version: 1,
       profiles: {
@@ -117,7 +117,7 @@ describe("discoverAuthStorage", () => {
     expect(codexCredential?.refresh).toBe("oauth-refresh");
   });
 
-  it("keeps keyRef and tokenRef profiles visible only for read-only pi discovery", () => {
+  it("keeps keyRef and tokenRef profiles visible only for read-only agent discovery", () => {
     const credentials = resolveAgentCredentialMapFromStore({
       version: 1,
       profiles: {
@@ -279,7 +279,7 @@ describe("discoverAuthStorage", () => {
     }
   });
 
-  it("includes workspace-scoped auth evidence in pi discovery credentials", () => {
+  it("includes workspace-scoped auth evidence in agent discovery credentials", () => {
     const credentials = addEnvBackedAgentCredentials(
       {},
       {

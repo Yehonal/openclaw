@@ -14,7 +14,7 @@ const ANTHROPIC_LIVE = isLiveTestEnabled(["ANTHROPIC_LIVE_TEST"]);
 const describeLive = LIVE && OPENAI_KEY ? describe : describe.skip;
 const describeAnthropicLive = ANTHROPIC_LIVE && ANTHROPIC_KEY ? describe : describe.skip;
 
-describeLive("pi embedded extra params (live)", () => {
+describeLive("embedded agent extra params (live)", () => {
   it("applies config max_completion_tokens alias to openai streamFn", async () => {
     const model = getModel("openai", "gpt-5.4") as unknown as Model<"openai-completions">;
 
@@ -102,7 +102,7 @@ describeLive("pi embedded extra params (live)", () => {
   }, 45_000);
 });
 
-describeAnthropicLive("pi embedded extra params (anthropic live)", () => {
+describeAnthropicLive("embedded agent extra params (anthropic live)", () => {
   it("verifies Anthropic fast-mode service_tier semantics against the live API", async () => {
     const headers = {
       "content-type": "application/json",

@@ -52,7 +52,7 @@ function buildLiveAnthropicModel(): {
   };
 }
 
-describeLive("pi embedded anthropic replay sanitization (live)", () => {
+describeLive("embedded agent anthropic replay sanitization (live)", () => {
   it(
     "accepts regular text-only assistant replay history",
     async () => {

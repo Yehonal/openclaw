@@ -752,7 +752,7 @@ async function runAnthropicImageCacheProbe(params: {
   };
 }
 
-describeCacheLive("pi embedded runner prompt caching (live)", () => {
+describeCacheLive("embedded agent runner prompt caching (live)", () => {
   beforeAll(async () => {
     liveRunnerRootDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-live-cache-"));
     liveCacheTraceFile = path.join(liveRunnerRootDir, "cache-trace.jsonl");
