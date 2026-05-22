@@ -231,17 +231,17 @@ describe("runAgentHarnessAttempt", () => {
     expect(agentRunAttempt).toHaveBeenCalledTimes(1);
   });
 
-  it("allows the selected PI harness to satisfy context-engine pre-prompt assembly", async () => {
+  it("allows the selected OpenClaw harness to satisfy context-engine pre-prompt assembly", async () => {
     const result = await runAgentHarnessAttempt({
       ...createAttemptParams(providerRuntimeConfig("codex", "pi")),
       contextEngine: createContextEngineRequiringAssembly(),
     });
 
-    expect(result.sessionIdUsed).toBe("pi");
-    expect(piRunAttempt).toHaveBeenCalledTimes(1);
+    expect(result.sessionIdUsed).toBe("openclaw");
+    expect(agentRunAttempt).toHaveBeenCalledTimes(1);
   });
 
-  it("surfaces an auto-selected plugin harness failure instead of replaying through PI", async () => {
+  it("surfaces an auto-selected plugin harness failure instead of replaying through OpenClaw", async () => {
     registerFailingCodexHarness();
 
     await expect(runAgentHarnessAttempt(createAttemptParams())).rejects.toThrow(
@@ -259,7 +259,7 @@ describe("runAgentHarnessAttempt", () => {
     expect(agentRunAttempt).not.toHaveBeenCalled();
   });
 
-  it("surfaces a forced plugin harness failure instead of replaying through PI", async () => {
+  it("surfaces a forced plugin harness failure instead of replaying through OpenClaw", async () => {
     registerFailingCodexHarness();
 
     await expect(
@@ -651,7 +651,7 @@ describe("selectAgentHarness", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("does not compact a selected plugin harness through PI when the plugin has no compactor", async () => {
+  it("does not compact a selected plugin harness through OpenClaw when the plugin has no compactor", async () => {
     registerFailingCodexHarness();
 
     await expect(
