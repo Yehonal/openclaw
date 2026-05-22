@@ -888,14 +888,14 @@ describe("deliverSubagentAnnouncement completion delivery", () => {
 
   it("does not also direct-run a queued message-tool-only active completion", async () => {
     const callGateway = createGatewayMock();
-    const queueEmbeddedPiMessageWithOutcome = createQueueOutcomeMock(true);
+    const queueEmbeddedAgentMessageWithOutcome = createQueueOutcomeMock(true);
     const result = await deliverSlackThreadAnnouncement({
       callGateway,
       sessionId: "requester-session-1",
       isActive: true,
       expectsCompletionMessage: true,
       directIdempotencyKey: "announce-harness-task",
-      queueEmbeddedPiMessageWithOutcome,
+      queueEmbeddedAgentMessageWithOutcome,
       sourceTool: "agent_harness_task",
     });
 
@@ -905,7 +905,7 @@ describe("deliverSubagentAnnouncement completion delivery", () => {
       enqueuedAt: 4_100,
       deliveredAt: 4_200,
     });
-    expect(queueEmbeddedPiMessageWithOutcome).toHaveBeenCalledTimes(1);
+    expect(queueEmbeddedAgentMessageWithOutcome).toHaveBeenCalledTimes(1);
     expect(callGateway).not.toHaveBeenCalled();
   });
 
