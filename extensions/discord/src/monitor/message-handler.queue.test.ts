@@ -35,6 +35,13 @@ function mockCalls(source: MockCallSource): Array<Array<unknown>> {
   return source.mock.calls;
 }
 
+function expectDefined<T>(value: T | undefined, label: string): T {
+  if (value === undefined) {
+    throw new Error(`expected ${label}`);
+  }
+  return value;
+}
+
 function statusPatches(setStatus: MockCallSource) {
   return setStatus.mock.calls.map(([patch]) => patch as Record<string, unknown>);
 }
@@ -144,6 +151,26 @@ function createHandlerWithDefaultPreflight(overrides?: { setStatus?: SetStatusFn
   return createDiscordMessageHandler(createDiscordHandlerParams(overrides));
 }
 
+function createAcceptedTypingScenario(params: {
+  context?: ReturnType<typeof createAcceptedDmPreflightContext>;
+  process?: (ctx: { replyTypingFeedback?: ReplyTypingFeedbackMock }) => Promise<void>;
+}) {
+  preflightDiscordMessageMock.mockReset();
+  processDiscordMessageMock.mockReset();
+  preflightDiscordMessageMock.mockResolvedValue(
+    params.context ?? createAcceptedDmPreflightContext(),
+  );
+  processDiscordMessageMock.mockImplementation(params.process ?? (async () => {}));
+  const replyTypingFeedback = createReplyTypingFeedbackMock("dm-1");
+  const onCleanup = replyTypingFeedback.onCleanup;
+  const createReplyTypingFeedback = vi.fn(() => replyTypingFeedback);
+  const handler = createDiscordMessageHandler({
+    ...createDiscordHandlerParams(),
+    testing: { createReplyTypingFeedback },
+  });
+  return { createReplyTypingFeedback, handler, onCleanup, replyTypingFeedback };
+}
+
 function installDefaultDiscordPreflight() {
   preflightDiscordMessageMock.mockImplementation(async (params: { data: { channel_id: string } }) =>
     createPreflightContext(params.data.channel_id),
@@ -191,7 +218,155 @@ describe("createDiscordMessageHandler queue behavior", () => {
     vi.useRealTimers();
   });
 
-  it("starts accepted DM typing feedback before queued processing starts", async () => {
+  describe("response suppression typing order", () => {
+    it("does not start typing when an accepted message is later suppressed", async () => {
+      const responseGate = vi.fn(() => "suppress" as const);
+      const { handler, replyTypingFeedback } = createAcceptedTypingScenario({
+        process: async () => {
+          expect(responseGate()).toBe("suppress");
+        },
+      });
+
+      await handler(createMessageData("m-suppressed", "dm-1") as never, {} as never);
+      await flushQueueWork();
+
+      expect(responseGate).toHaveBeenCalledTimes(1);
+      expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
+    });
+
+    it("starts typing once and only after an explicit mention is allowed", async () => {
+      const allowDecision = vi.fn(() => "allow" as const);
+      const context = createAcceptedDmPreflightContext({
+        cfg: {
+          ...createPreflightContext().cfg,
+          agents: { defaults: { typingMode: "instant" } },
+        },
+        isDirectMessage: false,
+        isGuildMessage: true,
+        messageChannelId: "guild-channel",
+        effectiveWasMentioned: true,
+      });
+      const { handler, replyTypingFeedback } = createAcceptedTypingScenario({
+        context,
+        process: async (ctx) => {
+          expect(allowDecision()).toBe("allow");
+          await ctx.replyTypingFeedback?.onReplyStart();
+        },
+      });
+
+      await handler(createMessageData("m-allowed-mention", "guild-channel") as never, {} as never);
+      await flushQueueWork();
+
+      expect(replyTypingFeedback.onReplyStart).toHaveBeenCalledTimes(1);
+      expect(
+        expectDefined(allowDecision.mock.invocationCallOrder[0], "allow decision invocation"),
+      ).toBeLessThan(
+        expectDefined(
+          replyTypingFeedback.onReplyStart.mock.invocationCallOrder[0],
+          "Discord reply-start invocation",
+        ),
+      );
+    });
+
+    it("keeps respond=false turns silent", async () => {
+      const respond = vi.fn(() => false);
+      const reply = vi.fn();
+      const { handler, replyTypingFeedback } = createAcceptedTypingScenario({
+        process: async () => {
+          if (respond()) {
+            reply();
+          }
+        },
+      });
+
+      await handler(createMessageData("m-respond-false", "dm-1") as never, {} as never);
+      await flushQueueWork();
+
+      expect(respond).toHaveBeenCalledTimes(1);
+      expect(reply).not.toHaveBeenCalled();
+      expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
+    });
+
+    it("keeps ingest active when the response is suppressed", async () => {
+      const ingest = vi.fn();
+      const { handler, replyTypingFeedback } = createAcceptedTypingScenario({
+        process: async () => {
+          ingest();
+        },
+      });
+
+      await handler(createMessageData("m-ingest-only", "dm-1") as never, {} as never);
+      await flushQueueWork();
+
+      expect(ingest).toHaveBeenCalledTimes(1);
+      expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
+    });
+
+    it("does not leak typing from duplicate messages that are suppressed", async () => {
+      const ingest = vi.fn();
+      const { handler, replyTypingFeedback } = createAcceptedTypingScenario({
+        process: async () => {
+          ingest();
+        },
+      });
+      const duplicate = createMessageData("m-duplicate-suppressed", "dm-1");
+
+      await handler(duplicate as never, {} as never);
+      await handler(duplicate as never, {} as never);
+      await flushQueueWork();
+
+      expect(processDiscordMessageMock).toHaveBeenCalledTimes(1);
+      expect(ingest).toHaveBeenCalledTimes(1);
+      expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
+    });
+
+    it("cleans prepared feedback when processing is skipped", async () => {
+      const { handler, onCleanup, replyTypingFeedback } = createAcceptedTypingScenario({});
+      handler.deactivate();
+
+      await handler(createMessageData("m-skipped", "dm-1") as never, {} as never);
+      await flushQueueWork();
+
+      expect(processDiscordMessageMock).not.toHaveBeenCalled();
+      expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
+      expect(onCleanup).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps permitted command replies able to start typing", async () => {
+      const commandGate = vi.fn(() => "allow" as const);
+      const context = createAcceptedDmPreflightContext({ messageText: "/status" });
+      const { handler, replyTypingFeedback } = createAcceptedTypingScenario({
+        context,
+        process: async (ctx) => {
+          expect(commandGate()).toBe("allow");
+          await ctx.replyTypingFeedback?.onReplyStart();
+        },
+      });
+
+      await handler(createMessageData("m-command", "dm-1") as never, {} as never);
+      await flushQueueWork();
+
+      expect(commandGate).toHaveBeenCalledTimes(1);
+      expect(replyTypingFeedback.onReplyStart).toHaveBeenCalledTimes(1);
+    });
+
+    it("honors a generic handled outcome without plugin-specific coupling", async () => {
+      const genericClaim = vi.fn(() => ({ handled: true }));
+      const { handler, replyTypingFeedback } = createAcceptedTypingScenario({
+        process: async () => {
+          expect(genericClaim()).toEqual({ handled: true });
+        },
+      });
+
+      await handler(createMessageData("m-generic-claim", "dm-1") as never, {} as never);
+      await flushQueueWork();
+
+      expect(genericClaim).toHaveBeenCalledTimes(1);
+      expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
+    });
+  });
+
+  it("prepares accepted DM typing feedback before queued processing without starting it", async () => {
     preflightDiscordMessageMock.mockReset();
     processDiscordMessageMock.mockReset();
     preflightDiscordMessageMock.mockImplementation(async () => createAcceptedDmPreflightContext());
@@ -216,19 +391,57 @@ describe("createDiscordMessageHandler queue behavior", () => {
         channelId: "dm-1",
       }),
     );
-    expect(replyTypingFeedback.onReplyStart).toHaveBeenCalledTimes(1);
-    expect(replyTypingFeedback.onReplyStart.mock.invocationCallOrder[0]).toBeLessThan(
-      processDiscordMessageMock.mock.invocationCallOrder[0],
+    expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
+    expect(
+      expectDefined(
+        createReplyTypingFeedback.mock.invocationCallOrder[0],
+        "Discord feedback preparation invocation",
+      ),
+    ).toBeLessThan(
+      expectDefined(
+        processDiscordMessageMock.mock.invocationCallOrder[0],
+        "Discord message processing invocation",
+      ),
     );
   });
 
-  it("keeps accepted DM dispatch running when accepted typing feedback fails", async () => {
+  it("keeps the configured typing cadence for prepared feedback", async () => {
+    preflightDiscordMessageMock.mockReset();
+    processDiscordMessageMock.mockReset();
+    preflightDiscordMessageMock.mockImplementation(async () =>
+      createAcceptedDmPreflightContext({
+        cfg: {
+          ...createPreflightContext().cfg,
+          agents: { defaults: { typingIntervalSeconds: 7 } },
+          session: { typingIntervalSeconds: 5 },
+        },
+      }),
+    );
+    processDiscordMessageMock.mockResolvedValue(undefined);
+    const replyTypingFeedback = createReplyTypingFeedbackMock("dm-1");
+    const createReplyTypingFeedback = vi.fn(() => replyTypingFeedback);
+
+    const handler = createDiscordMessageHandler({
+      ...createDiscordHandlerParams(),
+      testing: { createReplyTypingFeedback },
+    });
+    await handler(createMessageData("m-typing-cadence", "dm-1") as never, {} as never);
+    await flushQueueWork();
+
+    expect(createReplyTypingFeedback).toHaveBeenCalledWith(
+      expect.objectContaining({ keepaliveIntervalMs: 7_000 }),
+    );
+  });
+
+  it("passes prepared typing feedback into accepted DM dispatch", async () => {
     preflightDiscordMessageMock.mockReset();
     processDiscordMessageMock.mockReset();
     preflightDiscordMessageMock.mockImplementation(async () => createAcceptedDmPreflightContext());
-    processDiscordMessageMock.mockResolvedValue(undefined);
+    let processedFeedback: unknown;
+    processDiscordMessageMock.mockImplementation(async (ctx: { replyTypingFeedback?: unknown }) => {
+      processedFeedback = ctx.replyTypingFeedback;
+    });
     const replyTypingFeedback = createReplyTypingFeedbackMock("dm-1");
-    replyTypingFeedback.onReplyStart.mockRejectedValueOnce(new Error("typing failed"));
 
     const handler = createDiscordMessageHandler({
       ...createDiscordHandlerParams(),
@@ -240,7 +453,8 @@ describe("createDiscordMessageHandler queue behavior", () => {
 
     await flushQueueWork();
 
-    expect(replyTypingFeedback.onReplyStart).toHaveBeenCalledTimes(1);
+    expect(processedFeedback).toBe(replyTypingFeedback);
+    expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
     expect(processDiscordMessageMock).toHaveBeenCalledTimes(1);
   });
 
@@ -265,7 +479,7 @@ describe("createDiscordMessageHandler queue behavior", () => {
   });
 
   it.each(["message", "thinking", "never"] as const)(
-    "does not start accepted typing feedback when typing mode is %s",
+    "does not prepare accepted typing feedback when typing mode is %s",
     async (typingMode) => {
       preflightDiscordMessageMock.mockReset();
       processDiscordMessageMock.mockReset();
@@ -299,7 +513,7 @@ describe("createDiscordMessageHandler queue behavior", () => {
     },
   );
 
-  it("does not start default accepted typing feedback for unmentioned guild replies", async () => {
+  it("does not prepare default accepted typing feedback for unmentioned guild replies", async () => {
     preflightDiscordMessageMock.mockReset();
     processDiscordMessageMock.mockReset();
     preflightDiscordMessageMock.mockResolvedValue(
@@ -327,7 +541,7 @@ describe("createDiscordMessageHandler queue behavior", () => {
     expect(processDiscordMessageMock).toHaveBeenCalledTimes(1);
   });
 
-  it("starts accepted typing feedback for message-tool-only guild replies", async () => {
+  it("prepares message-tool-only guild typing feedback without starting it", async () => {
     preflightDiscordMessageMock.mockReset();
     processDiscordMessageMock.mockReset();
     preflightDiscordMessageMock.mockResolvedValue(
@@ -359,11 +573,11 @@ describe("createDiscordMessageHandler queue behavior", () => {
 
     await flushQueueWork();
 
-    expect(replyTypingFeedback.onReplyStart).toHaveBeenCalledTimes(1);
+    expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
     expect(processDiscordMessageMock).toHaveBeenCalledTimes(1);
   });
 
-  it("deduplicates accepted typing feedback while same-session runs are queued", async () => {
+  it("deduplicates prepared typing feedback while same-session runs are queued", async () => {
     preflightDiscordMessageMock.mockReset();
     processDiscordMessageMock.mockReset();
 
@@ -397,7 +611,7 @@ describe("createDiscordMessageHandler queue behavior", () => {
     await flushQueueWork();
 
     expect(createReplyTypingFeedback).toHaveBeenCalledTimes(1);
-    expect(replyTypingFeedback.onReplyStart).toHaveBeenCalledTimes(1);
+    expect(replyTypingFeedback.onReplyStart).not.toHaveBeenCalled();
     expect(processedContexts[0]?.replyTypingFeedback).toBe(replyTypingFeedback);
 
     firstRun.resolve();
