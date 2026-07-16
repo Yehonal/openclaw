@@ -3,6 +3,6 @@
   "id": "typing-backport.4",
   "baseVersion": "2026.7.1",
   "upstreamPullRequest": 108449,
-  "upstreamFixHead": "54afa50c3898f28e302022a10063f57997930855",
+  "upstreamFixCommit": "175181f42f9c18853e15049d6211ae7b841315a5",
   "exitCondition": "Remove the backport by upgrading to the first official OpenClaw release that contains PR #108449."
 }
