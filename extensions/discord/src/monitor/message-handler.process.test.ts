@@ -1,5 +1,4 @@
 // Discord tests cover message handler.process plugin behavior.
-import { expectDefined } from "@openclaw/normalization-core";
 import { MessageFlags } from "discord-api-types/v10";
 import { DEFAULT_EMOJIS, DEFAULT_TIMING } from "openclaw/plugin-sdk/channel-feedback";
 import {
@@ -933,9 +932,11 @@ describe("processDiscordMessage ack reactions", () => {
     await runProcessDiscordMessage(ctx);
 
     expect(typingMocks.sendTyping).toHaveBeenCalledTimes(1);
-    expect(expectDefined(admit.mock.invocationCallOrder[0], "admission call order")).toBeLessThan(
-      expectDefined(typingMocks.sendTyping.mock.invocationCallOrder[0], "typing call order"),
-    );
+    const admissionOrder = admit.mock.invocationCallOrder[0];
+    const typingOrder = typingMocks.sendTyping.mock.invocationCallOrder[0];
+    expect(admissionOrder).toBeDefined();
+    expect(typingOrder).toBeDefined();
+    expect(admissionOrder as number).toBeLessThan(typingOrder as number);
     expect(deliverDiscordReply).toHaveBeenCalledTimes(1);
   });
 

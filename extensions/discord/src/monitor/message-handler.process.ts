@@ -593,15 +593,6 @@ async function processDiscordMessageInner(
     await replyPipeline.typingCallbacks?.onReplyStart();
     await statusReactions.setThinking();
   };
-  let replyLifecycleStarted = false;
-  const onDiscordReplyStart = async () => {
-    if (isProcessAborted(abortSignal)) {
-      return;
-    }
-    replyLifecycleStarted = true;
-    await replyPipeline.typingCallbacks?.onReplyStart();
-    await statusReactions.setThinking();
-  };
   const beforeDiscordPayloadDelivery = (
     payload: ReplyPayload,
     info: { kind: ReplyDispatchKind },
