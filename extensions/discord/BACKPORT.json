@@ -1,0 +1,6 @@
+{
+  "id": "typing-backport.4",
+  "upstreamPullRequest": 108449,
+  "upstreamFixCommit": "175181f42f9c18853e15049d6211ae7b841315a5",
+  "component": "@openclaw/discord"
+}
