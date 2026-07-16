@@ -251,6 +251,7 @@ async function processDiscordMessageInner(
     },
   });
   const sourceRepliesAreToolOnly = sourceReplyDeliveryMode === "message_tool_only";
+  const configuredTypingMode = cfg.session?.typingMode ?? cfg.agents?.defaults?.typingMode;
   const ackReaction = resolveAckReaction(cfg, route.agentId, {
     channel: "discord",
     accountId,

@@ -429,7 +429,12 @@ describe("createDiscordMessageHandler queue behavior", () => {
     await flushQueueWork();
 
     expect(createReplyTypingFeedback).toHaveBeenCalledWith(
-      expect.objectContaining({ keepaliveIntervalMs: 7_000 }),
+      expect.objectContaining({
+        cfg: expect.objectContaining({
+          agents: { defaults: { typingIntervalSeconds: 7 } },
+          session: { typingIntervalSeconds: 5 },
+        }),
+      }),
     );
   });
 
