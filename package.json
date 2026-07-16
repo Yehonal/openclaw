@@ -1,6 +1,7 @@
 {
   "name": "openclaw",
-  "version": "2026.6.11-typing-backport.1",
+  "version": "2026.6.11",
+  "openclawBackport": "typing-backport.2",
   "description": "Multi-channel AI gateway with extensible messaging integrations",
   "keywords": [],
   "homepage": "https://github.com/openclaw/openclaw#readme",
@@ -21,6 +22,7 @@
     "test": "test"
   },
   "files": [
+    "BACKPORT.json",
     "CHANGELOG.md",
     "LICENSE",
     "npm-shrinkwrap.json",
