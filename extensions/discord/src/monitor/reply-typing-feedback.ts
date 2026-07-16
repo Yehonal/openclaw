@@ -9,12 +9,6 @@ import { sendTyping } from "./typing.js";
 export const DISCORD_REPLY_TYPING_MAX_DURATION_MS = 20 * 60_000;
 
 // Discord can keep long tool-heavy replies alive, but not forever.
-// The dispatch restart path gives each accepted run a fresh controller.
-export type DiscordReplyTypingFeedback = ReturnType<typeof createTypingCallbacks> & {
-  updateChannelId: (channelId: string) => void;
-  getChannelId: () => string;
-  restartForDispatch: (channelId: string) => void;
-};
 
 export function createDiscordReplyTypingFeedback(params: {
   cfg: OpenClawConfig;
@@ -24,8 +18,8 @@ export function createDiscordReplyTypingFeedback(params: {
   rest?: RequestClient;
   log: (message: string) => void;
   maxDurationMs?: number;
-}): DiscordReplyTypingFeedback {
-  let channelId = params.channelId;
+  keepaliveIntervalMs?: number;
+}) {
   const rest =
     params.rest ??
     createDiscordRestClient({
@@ -33,39 +27,17 @@ export function createDiscordReplyTypingFeedback(params: {
       token: params.token,
       accountId: params.accountId,
     }).rest;
-  const createCallbacks = () =>
-    createTypingCallbacks({
-      start: () => sendTyping({ rest, channelId }),
-      onStartError: (err) => {
-        logTypingFailure({
-          log: params.log,
-          channel: "discord",
-          target: channelId,
-          error: err,
-        });
-      },
-      maxDurationMs: params.maxDurationMs ?? DISCORD_REPLY_TYPING_MAX_DURATION_MS,
-    });
-  const updateChannelId = (nextChannelId: string) => {
-    const trimmed = nextChannelId.trim();
-    if (trimmed) {
-      channelId = trimmed;
-    }
-  };
-  let callbacks = createCallbacks();
-  return {
-    // Expose one stable owner while allowing the inner typing controller to
-    // rotate at the actual dispatch boundary.
-    onReplyStart: () => callbacks.onReplyStart(),
-    onIdle: () => callbacks.onIdle?.(),
-    onCleanup: () => callbacks.onCleanup?.(),
-    updateChannelId,
-    restartForDispatch: (nextChannelId) => {
-      updateChannelId(nextChannelId);
-      // Rotate the prepared controller so dispatch owns a fresh heartbeat.
-      callbacks.onCleanup?.();
-      callbacks = createCallbacks();
+  return createTypingCallbacks({
+    start: () => sendTyping({ rest, channelId: params.channelId }),
+    onStartError: (err) => {
+      logTypingFailure({
+        log: params.log,
+        channel: "discord",
+        target: params.channelId,
+        error: err,
+      });
     },
-    getChannelId: () => channelId,
-  };
+    keepaliveIntervalMs: params.keepaliveIntervalMs,
+    maxDurationMs: params.maxDurationMs ?? DISCORD_REPLY_TYPING_MAX_DURATION_MS,
+  });
 }
